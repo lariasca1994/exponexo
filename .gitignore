@@ -1,0 +1,48 @@
+# Variables de entorno reales: NUNCA se suben (solo los .env.example)
+.env
+.env.*
+!.env.example
+
+# Archivos del asistente y del editor
+CLAUDE.md
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Credenciales y certificados
+wallet/
+*.pem
+*.key
+*.p12
+*.jks
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / React
+node_modules/
+dist/
+coverage/
+
+# Java / Spring Boot
+target/
+build/
+.gradle/
+*.class
+
+# .NET
+bin/
+obj/
+*.user
+
+# Pruebas E2E
+test-results/
+playwright-report/
