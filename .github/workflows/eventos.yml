@@ -1,0 +1,106 @@
+name: CI/CD Eventos y Avisos (AWS Lambda)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'servicios/eventos/**'
+      - '.github/workflows/eventos.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'servicios/eventos/**'
+      - '.github/workflows/eventos.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas Unitarias Consumidores SQS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servicios/eventos
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: servicios/eventos/requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Ejecutar pruebas
+        env:
+          BREVO_API_KEY: fake-ci-key
+          TELEGRAM_BOT_TOKEN: fake-bot-token
+          TELEGRAM_CHAT_ID: fake-chat-id
+        run: pytest pruebas -v
+
+  desplegar:
+    name: Empaquetar y Desplegar Funciones Lambda
+    needs: pruebas
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: produccion
+    defaults:
+      run:
+        working-directory: servicios/eventos
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS vía OIDC (Sin llaves permanentes)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Empaquetar función Repartidor
+        run: |
+          mkdir -p paquete_repartidor
+          pip install -r requirements.txt -t paquete_repartidor
+          cp repartidor.py paquete_repartidor/
+          cd paquete_repartidor && zip -r ../repartidor.zip . && cd ..
+
+      - name: Empaquetar función Avisos
+        run: |
+          mkdir -p paquete_avisos
+          pip install -r requirements.txt -t paquete_avisos
+          cp avisos.py paquete_avisos/
+          cd paquete_avisos && zip -r ../avisos.zip . && cd ..
+
+      - name: Desplegar exponexo-repartidor en AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name exponexo-repartidor \
+            --zip-file fileb://repartidor.zip
+
+      - name: Desplegar exponexo-avisos en AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name exponexo-avisos \
+            --zip-file fileb://avisos.zip
+
+      - name: Configurar retención de logs en CloudWatch (14 días)
+        run: |
+          aws logs put-retention-policy --log-group-name /aws/lambda/exponexo-repartidor --retention-in-days 14 || true
+          aws logs put-retention-policy --log-group-name /aws/lambda/exponexo-avisos --retention-in-days 14 || true

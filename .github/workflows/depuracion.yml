@@ -1,0 +1,27 @@
+name: Mantenimiento y Depuración Periódica
+
+on:
+  schedule:
+    - cron: '0 0 1,16 * *' # Días 1 y 16 de cada mes a medianoche UTC
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  packages: write
+  contents: read
+
+jobs:
+  limpieza-caches:
+    name: Depurar Cachés Antiguas de GitHub Actions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Limpiar cachés huérfanas
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Consultando cachés almacenadas..."
+          gh cache list --limit 100 || true

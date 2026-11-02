@@ -21,6 +21,7 @@ wallet/
 # Python
 __pycache__/
 *.pyc
+*.db
 .venv/
 venv/
 .pytest_cache/
@@ -31,6 +32,8 @@ htmlcov/
 node_modules/
 dist/
 coverage/
+package-lock.json
+*.tsbuildinfo
 
 # Java / Spring Boot
 target/

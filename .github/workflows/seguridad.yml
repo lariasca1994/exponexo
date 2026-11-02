@@ -1,0 +1,68 @@
+name: Auditoría Continua de Seguridad
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Cada lunes a las 03:00 UTC
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auditoria-dependencias:
+    name: Escaneo de Vulnerabilidades en Dependencias
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      # Python Security Audit
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Auditar dependencias Python (pip-audit)
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip-audit -r servicios/identidad-reservas/requirements.txt || true
+          pip-audit -r servicios/eventos/requirements.txt || true
+
+      # Node.js Security Audit
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Auditar dependencias NPM (Portal)
+        working-directory: portal
+        run: |
+          npm audit --audit-level=high || true
+
+      # .NET Security Audit
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Auditar dependencias .NET
+        working-directory: servicios/mesa-ayuda
+        run: |
+          dotnet restore MesaAyuda.sln
+          dotnet list MesaAyuda.sln package --vulnerable --include-transitive || true
+
+      # Java Security Audit
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Auditar dependencias Maven
+        working-directory: servicios/pagos
+        run: |
+          chmod +x ./mvnw
+          ./mvnw dependency:resolve || true

@@ -1,0 +1,9 @@
+bin/
+obj/
+pruebas/
+.git
+.gitignore
+.env
+*.log
+.vscode/
+.vs/

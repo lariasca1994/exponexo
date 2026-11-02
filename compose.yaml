@@ -1,0 +1,70 @@
+services:
+  identidad-reservas:
+    build:
+      context: ./servicios/identidad-reservas
+      dockerfile: Dockerfile
+    container_name: exponexo-identidad-reservas
+    ports:
+      - "8001:8001"
+    environment:
+      - ENTORNO=desarrollo
+      - PUERTO=8001
+      - BASE_DATOS_URL=sqlite:////app/data/identidad.db
+      - LLAVE_PRIVADA_RSA_PEM=/app/claves/jwt-rs256.key
+      - LLAVE_PUBLICA_RSA_PEM=/app/claves/jwt-rs256.pub
+      - LLAVE_SECRETA_SIMETRICA=desarrollo-super-secreta-32-bytes-minimo!
+      - ORIGENES_PERMITIDOS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080
+    volumes:
+      - ./datos/identidad:/app/data
+    networks:
+      - exponexo-net
+
+  pagos:
+    build:
+      context: ./servicios/pagos
+      dockerfile: Dockerfile
+    container_name: exponexo-pagos
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - SPRING_PROFILES_ACTIVE=desarrollo
+      - JWKS_URL=http://identidad-reservas:8001/.well-known/jwks.json
+    networks:
+      - exponexo-net
+    depends_on:
+      - identidad-reservas
+
+  mesa-ayuda:
+    build:
+      context: ./servicios/mesa-ayuda
+      dockerfile: Dockerfile
+    container_name: exponexo-mesa-ayuda
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - ASPNETCORE_ENVIRONMENT=Development
+      - JWKS_URL=http://identidad-reservas:8001/.well-known/jwks.json
+    networks:
+      - exponexo-net
+    depends_on:
+      - identidad-reservas
+
+  portal:
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    container_name: exponexo-portal
+    ports:
+      - "8080:8080"
+    networks:
+      - exponexo-net
+    depends_on:
+      - identidad-reservas
+      - pagos
+      - mesa-ayuda
+
+networks:
+  exponexo-net:
+    driver: bridge

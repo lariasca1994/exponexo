@@ -1,0 +1,95 @@
+name: CI/CD Pagos y Facturación
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'servicios/pagos/**'
+      - '.github/workflows/pagos.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'servicios/pagos/**'
+      - '.github/workflows/pagos.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas Unitarias y de Integración (JUnit 5)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servicios/pagos
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Dar permisos de ejecución a mvnw
+        run: chmod +x ./mvnw
+
+      - name: Ejecutar pruebas
+        env:
+          SPRING_PROFILES_ACTIVE: desarrollo
+        run: ./mvnw test -B
+
+  construir-y-desplegar:
+    name: Construir Imagen y Desplegar en Google Cloud Run
+    needs: pruebas
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: produccion
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Autenticación en Google Cloud vía OIDC (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configurar Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Autenticar Docker con Google Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Construir y publicar imagen
+        uses: docker/build-push-action@v5
+        with:
+          context: ./servicios/pagos
+          file: ./servicios/pagos/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/exponexo/pagos:${{ github.sha }}
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/exponexo/pagos:latest
+
+      - name: Desplegar en Google Cloud Run
+        run: |
+          gcloud run deploy exponexo-pagos \
+            --image ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/exponexo/pagos:${{ github.sha }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8002
+
+      - name: Comprobar salud del servicio
+        run: |
+          curl --fail --retry 5 --retry-delay 10 https://${{ secrets.APP_DOMAIN_PAGOS }}/actuator/health

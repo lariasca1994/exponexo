@@ -1,0 +1,7 @@
+{{titulo}} · ExpoNexo
+
+{{mensaje}}
+
+Portal: {{enlace_portal}}
+
+Por tu seguridad, este mensaje nunca incluye contraseñas, códigos de verificación ni datos de medios de pago.
