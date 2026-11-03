@@ -1,7 +1,9 @@
+import html
 import logging
 import os
 import pathlib
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -25,14 +27,19 @@ TEMPLATE_DIR = pathlib.Path(__file__).resolve().parent / "plantillas"
 def render_template(title: str, message: str, portal_link: str) -> tuple[str, str]:
     html_raw = (TEMPLATE_DIR / "base.html").read_text(encoding="utf-8")
     txt_raw = (TEMPLATE_DIR / "base.txt").read_text(encoding="utf-8")
+    # El logo del portal: en los correos solo se ven bien las imagenes PNG.
+    origen = urlparse(portal_link)
+    logo = f"{origen.scheme}://{origen.netloc}/apple-touch-icon.png"
     replacements = {
         "{{titulo}}": title,
         "{{mensaje}}": message,
         "{{enlace_portal}}": portal_link,
     }
+    # En el HTML los valores se escapan: el mensaje lleva datos del usuario (su nombre).
     for placeholder, val in replacements.items():
-        html_raw = html_raw.replace(placeholder, val)
+        html_raw = html_raw.replace(placeholder, html.escape(val))
         txt_raw = txt_raw.replace(placeholder, val)
+    html_raw = html_raw.replace("{{logo}}", html.escape(logo))
     return html_raw, txt_raw
 
 
