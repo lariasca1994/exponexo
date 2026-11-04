@@ -47,6 +47,11 @@ a.tarjeta:hover,
   margin-top: var(--esp-5);
 }
 
+/* Dentro de una grilla el espacio lo pone el gap */
+:is(.grid-2, .grid-3, .grid-4) > .panel-card {
+  margin-top: 0;
+}
+
 .auth-wrapper {
   max-width: 460px;
   margin: var(--esp-10) auto;
