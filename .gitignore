@@ -54,3 +54,6 @@ playwright-report/
 
 # Vercel (vínculo local del CLI)
 .vercel/
+
+# Imágenes generadas por datos-demo/imagenes.py (se suben a Cloudinary, no se versionan)
+datos-demo/imagenes/

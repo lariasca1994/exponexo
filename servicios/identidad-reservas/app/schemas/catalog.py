@@ -33,6 +33,7 @@ class EventCreateRequest(BaseModel):
     estado: Literal["borrador", "publicado", "en_curso", "finalizado", "cancelado"] = "publicado"
     precio_entrada: Decimal = Field(default=Decimal("45000.00"), ge=Decimal("0.00"))
     aforo: int = Field(default=1000, ge=1)
+    imagen_url: str | None = Field(default=None, max_length=300)
 
 
 class EventUpdateRequest(BaseModel):
@@ -43,6 +44,7 @@ class EventUpdateRequest(BaseModel):
     estado: Literal["borrador", "publicado", "en_curso", "finalizado", "cancelado"] | None = None
     precio_entrada: Decimal | None = Field(default=None, ge=Decimal("0.00"))
     aforo: int | None = Field(default=None, ge=1)
+    imagen_url: str | None = Field(default=None, max_length=300)
 
 
 class EventResponse(BaseModel):
@@ -57,6 +59,7 @@ class EventResponse(BaseModel):
     estado: str
     precio_entrada: Decimal
     aforo: int
+    imagen_url: str | None = None
     creado_en: datetime
 
 

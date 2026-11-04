@@ -9,7 +9,7 @@
 .tarjeta {
   position: relative;
   padding: var(--esp-6);
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-surface) 92%, var(--bg-subtle)) 100%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -141,21 +141,23 @@ input[type="radio"] {
 /* ---- Botones ------------------------------------------------------------- */
 .btn,
 .boton {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--esp-2);
-  min-height: 42px;
-  padding: 0.6rem 1.1rem;
+  min-height: 44px;
+  padding: 0.65rem 1.25rem;
   font-family: inherit;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.2;
+  letter-spacing: 0.005em;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   transition: background-color var(--transition-fast), border-color var(--transition-fast),
     box-shadow var(--transition-fast), transform var(--transition-fast), color var(--transition-fast);
 }
@@ -165,9 +167,20 @@ input[type="radio"] {
   text-decoration: none;
 }
 
+.btn:hover:not(:disabled),
+.boton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
 .btn:active,
 .boton:active {
-  transform: translateY(1px);
+  transform: translateY(0);
+}
+
+.btn:focus-visible,
+.boton:focus-visible {
+  outline: none;
+  box-shadow: var(--anillo-foco);
 }
 
 .btn:disabled,
@@ -180,29 +193,44 @@ input[type="radio"] {
 .btn-primary,
 .boton-primario {
   color: #ffffff;
-  background: var(--brand-button);
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12), 0 4px 12px color-mix(in srgb, var(--brand-button) 28%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-button) 88%, #ffffff) 0%, var(--brand-button) 100%);
+  border-color: color-mix(in srgb, var(--brand-button) 80%, #000000);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(17, 24, 39, 0.18),
+    0 6px 16px color-mix(in srgb, var(--brand-button) 30%, transparent);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
 }
 
 .btn-primary:hover:not(:disabled),
 .boton-primario:hover:not(:disabled) {
   color: #ffffff;
-  background: var(--brand-button-hover);
+  background: linear-gradient(180deg, var(--brand-button) 0%, var(--brand-button-hover) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 4px rgba(17, 24, 39, 0.2),
+    0 10px 24px color-mix(in srgb, var(--brand-button) 38%, transparent);
 }
 
 .btn-secondary,
 .boton-secundario {
   color: var(--text-primary);
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-subtle) 100%);
   border-color: var(--border-color);
-  box-shadow: var(--shadow-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--shadow-sm);
+}
+
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .boton-secundario {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-sm);
 }
 
 .btn-secondary:hover:not(:disabled),
 .boton-secundario:hover:not(:disabled) {
-  color: var(--text-primary);
-  background: var(--bg-subtle);
-  border-color: var(--text-muted);
+  color: var(--brand-primary);
+  background: var(--bg-surface);
+  border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--border-color));
+  box-shadow: var(--shadow-card);
 }
 
 /* ---- Alertas ------------------------------------------------------------- */
@@ -339,4 +367,85 @@ summary {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+/* ---- Tarjeta de evento con portada --------------------------------------- */
+.tarjeta-evento {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tarjeta-evento__imagen {
+  aspect-ratio: 1200 / 630;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--db-sqlserver), var(--db-oracle) 55%, var(--db-mongodb));
+}
+
+.tarjeta-evento__imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tarjeta-evento:hover .tarjeta-evento__imagen img {
+  transform: scale(1.04);
+}
+
+.tarjeta-evento__imagen span {
+  font-size: var(--texto-xl);
+  font-weight: 750;
+  color: #ffffff;
+}
+
+.tarjeta-evento__cuerpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--esp-2);
+  padding: var(--esp-5) var(--esp-6) var(--esp-6);
+}
+
+.tarjeta-evento__cuerpo h3 {
+  margin: var(--esp-1) 0 0;
+  font-size: var(--texto-xl);
+}
+
+.tarjeta-evento__cuerpo .btn {
+  margin-top: auto;
+}
+
+.tarjeta-evento__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2) var(--esp-8);
+  margin: 0 0 var(--esp-4);
+}
+
+.tarjeta-evento__datos dt {
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tarjeta-evento__datos dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.plano-portada {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  margin-bottom: var(--esp-6);
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }

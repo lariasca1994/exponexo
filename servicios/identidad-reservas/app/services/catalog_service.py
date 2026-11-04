@@ -99,6 +99,7 @@ def create_event(db: Session, payload: EventCreateRequest) -> Event:
         estado=payload.estado,
         precio_entrada=payload.precio_entrada,
         aforo=payload.aforo,
+        imagen_url=payload.imagen_url,
     )
     db.add(event)
     db.commit()
@@ -130,6 +131,8 @@ def update_event(db: Session, event_id: str, payload: EventUpdateRequest) -> Eve
         event.precio_entrada = payload.precio_entrada
     if payload.aforo is not None:
         event.aforo = payload.aforo
+    if payload.imagen_url is not None:
+        event.imagen_url = payload.imagen_url or None
 
     if _ensure_utc(event.fin) <= _ensure_utc(event.inicio):
         raise ProblemDetailError(

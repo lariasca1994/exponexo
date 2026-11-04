@@ -72,6 +72,11 @@ jobs:
           done
           npm install -g --silent mongosh
 
+      - name: Imágenes de demostración (solo se generan, no se suben)
+        run: |
+          python -m pip install -q pillow
+          python datos-demo/imagenes.py --solo-generar
+
       - name: SQL Server temporal - esquema real (migraciones) y carga dos veces
         working-directory: servicios/identidad-reservas
         env:
@@ -148,6 +153,15 @@ jobs:
           done
           npm install -g --silent mongosh
 
+      - name: Imágenes de demostración a Cloudinary
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          python -m pip install -q pillow
+          python datos-demo/imagenes.py --subir "$RUNNER_TEMP/imagenes.sql"
+
       - name: Identidad (Azure SQL)
         env:
           SQLSERVER_SERVIDOR: ${{ secrets.SQLSERVER_SERVIDOR }}
@@ -157,7 +171,7 @@ jobs:
         run: |
           python datos-demo/cargar_sqlserver.py \
             "DRIVER={ODBC Driver 18 for SQL Server};SERVER=tcp:$SQLSERVER_SERVIDOR,1433;DATABASE=$SQLSERVER_BASE;UID=$SQLSERVER_USUARIO;PWD={$SQLSERVER_CONTRASENA};Encrypt=yes;TrustServerCertificate=no" \
-            --asignados "$RUNNER_TEMP/asignados.js"
+            --asignados "$RUNNER_TEMP/asignados.js" --extra "$RUNNER_TEMP/imagenes.sql"
 
       - name: Pagos (Oracle)
         env:

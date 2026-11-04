@@ -5,19 +5,27 @@ import "../../estilos/portada.css";
 // La portada no consulta ningún servicio: así la base de datos sigue pausada mientras nadie
 // ingrese ni abra el catálogo. Los próximos eventos se muestran como vitrina y llevan al catálogo,
 // que sí consulta disponibilidad real.
+// Portadas generadas y subidas a Cloudinary por datos-demo/imagenes.py (el nombre de la nube es público)
+const NUBE = import.meta.env.VITE_CLOUDINARY_NUBE as string | undefined;
+const portada = (slug: string) =>
+  NUBE ? `https://res.cloudinary.com/${NUBE}/image/upload/f_auto,q_auto,w_800/exponexo/demo/evento-${slug}` : null;
+
 const PROXIMOS_EVENTOS = [
   {
     nombre: "ExpoNexo Innovación 2026",
+    slug: "exponexo-innovacion-2026",
     fechas: "24 – 27 nov 2026",
     resumen: "Feria de innovación, tecnología y negocios.",
   },
   {
     nombre: "ExpoNexo Manufactura 2027",
+    slug: "exponexo-manufactura-2027",
     fechas: "9 – 12 mar 2027",
     resumen: "Manufactura, automatización e industria 4.0.",
   },
   {
     nombre: "ExpoNexo Agroindustria 2027",
+    slug: "exponexo-agroindustria-2027",
     fechas: "15 – 18 jun 2027",
     resumen: "Agroindustria, sostenibilidad y cadena de suministro.",
   },
@@ -104,6 +112,9 @@ export function Portada() {
           <div className="portada-lista-eventos">
             {PROXIMOS_EVENTOS.map((evento) => (
               <article key={evento.nombre} className="portada-tarjeta portada-evento">
+                {portada(evento.slug) && (
+                  <img className="portada-evento__imagen" src={portada(evento.slug)!} alt="" loading="lazy" width={1200} height={630} />
+                )}
                 <span className="portada-fecha">{evento.fechas}</span>
                 <h3>{evento.nombre}</h3>
                 <p>{evento.resumen}</p>

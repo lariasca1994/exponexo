@@ -70,6 +70,10 @@ export function PlanoStands() {
         Plano de Stands {evento ? `· ${evento.nombre}` : ""}
       </h1>
 
+      {evento?.imagen_url && (
+        <img className="plano-portada" src={evento.imagen_url} alt={`Portada de ${evento.nombre}`} width={1200} height={630} />
+      )}
+
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
         <span className="badge" style={{ borderLeft: "4px solid var(--status-available)" }}>
           Disponible

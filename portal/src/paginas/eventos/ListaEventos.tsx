@@ -43,20 +43,35 @@ export function ListaEventos() {
 
       <div className="grid-2">
         {eventos.map((ev) => (
-          <div key={ev.id} className="panel-card">
-            <span className="badge">{ev.estado.toUpperCase()}</span>
-            <h3 style={{ marginBottom: "0.4rem" }}>{ev.nombre}</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem" }}>
-              {ev.descripcion || "Feria oficial en el recinto ExpoNexo."}
-            </p>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-              <strong>Fechas:</strong> {new Date(ev.inicio).toLocaleDateString()} –{" "}
-              {new Date(ev.fin).toLocaleDateString()} · <strong>Aforo:</strong> {ev.aforo}
-            </p>
-            <Link to={`/eventos/${ev.id}/stands`} className="btn btn-primary">
-              Ver plano de stands
-            </Link>
-          </div>
+          <article key={ev.id} className="panel-card tarjeta-evento">
+            <div className="tarjeta-evento__imagen">
+              {ev.imagen_url ? (
+                <img src={ev.imagen_url} alt={`Portada de ${ev.nombre}`} loading="lazy" width={1200} height={630} />
+              ) : (
+                <span aria-hidden="true">{ev.nombre.replace("ExpoNexo ", "")}</span>
+              )}
+            </div>
+            <div className="tarjeta-evento__cuerpo">
+              <span className="badge badge-success">{ev.estado}</span>
+              <h3>{ev.nombre}</h3>
+              <p className="texto-tenue">{ev.descripcion || "Feria oficial en el recinto ExpoNexo."}</p>
+              <dl className="tarjeta-evento__datos">
+                <div>
+                  <dt>Fechas</dt>
+                  <dd>
+                    {new Date(ev.inicio).toLocaleDateString("es-CO")} – {new Date(ev.fin).toLocaleDateString("es-CO")}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Aforo</dt>
+                  <dd className="numero-tabular">{ev.aforo.toLocaleString("es-CO")}</dd>
+                </div>
+              </dl>
+              <Link to={`/eventos/${ev.id}/stands`} className="btn btn-primary">
+                Ver plano de stands
+              </Link>
+            </div>
+          </article>
         ))}
       </div>
     </div>

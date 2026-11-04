@@ -1,6 +1,6 @@
 """Carga identidad.sql en SQL Server y verifica conteos y coherencia.
 
-Uso: python datos-demo/cargar_sqlserver.py "<cadena ODBC>" [--asignados <archivo>]
+Uso: python datos-demo/cargar_sqlserver.py "<cadena ODBC>" [--asignados <archivo>] [--extra <archivo.sql>]
 Con --asignados escribe en ese archivo los ids de las cuentas fijas con rol personal o
 administrador (los usa el script de MongoDB para asignar tickets). La base puede estar pausada:
 el primer intento la despierta y se reintenta.
@@ -39,6 +39,8 @@ def main() -> None:
     conexion = conectar(sys.argv[1])
     cursor = conexion.cursor()
     script = (Path(__file__).parent / "identidad.sql").read_text(encoding="utf-8")
+    if "--extra" in sys.argv:  # p. ej. las URL de las imágenes subidas a Cloudinary
+        script += "\n" + Path(sys.argv[sys.argv.index("--extra") + 1]).read_text(encoding="utf-8")
     for lote in [b.strip() for b in script.split("\nGO\n") if b.strip() and not b.strip().startswith("SET NOCOUNT")]:
         cursor.execute(lote)
     conexion.commit()

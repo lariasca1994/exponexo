@@ -80,6 +80,7 @@ export interface EventItem {
   estado: string;
   precio_entrada: string;
   aforo: number;
+  imagen_url?: string | null;
   creado_en: string;
 }
 
