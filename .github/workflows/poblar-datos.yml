@@ -18,8 +18,7 @@ permissions:
 
 env:
   VERSION_ORACLE_JDBC: 23.26.3.0.0
-  # Clave de las bases temporales del runner: distinta en cada ejecución y descartada al terminar
-  CLAVE_TEMPORAL: Tmp-${{ github.run_id }}-${{ github.run_attempt }}x
+  # Las bases temporales del runner usan una clave distinta en cada ejecución (Tmp-<run>-<intento>x)
 
 jobs:
   validar:
@@ -29,14 +28,14 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: 'Y'
-          MSSQL_SA_PASSWORD: ${{ env.CLAVE_TEMPORAL }}
+          MSSQL_SA_PASSWORD: Tmp-${{ github.run_id }}-${{ github.run_attempt }}x
         ports: ['1433:1433']
       oracle:
         image: gvenzl/oracle-free:23-slim-faststart
         env:
-          ORACLE_PASSWORD: ${{ env.CLAVE_TEMPORAL }}
+          ORACLE_PASSWORD: Tmp-${{ github.run_id }}-${{ github.run_attempt }}x
           APP_USER: pagos
-          APP_USER_PASSWORD: ${{ env.CLAVE_TEMPORAL }}
+          APP_USER_PASSWORD: Tmp-${{ github.run_id }}-${{ github.run_attempt }}x
         ports: ['1521:1521']
         options: --health-cmd healthcheck.sh --health-interval 10s --health-timeout 5s --health-retries 30
       mongo:
@@ -75,7 +74,7 @@ jobs:
         working-directory: servicios/identidad-reservas
         env:
           APP_ENTORNO: migracion
-          ODBC_LOCAL: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;UID=sa;PWD=${{ env.CLAVE_TEMPORAL }};Encrypt=yes;TrustServerCertificate=yes'
+          ODBC_LOCAL: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;UID=sa;PWD=Tmp-${{ github.run_id }}-${{ github.run_attempt }}x;Encrypt=yes;TrustServerCertificate=yes'
         run: |
           python - <<'PY'
           import os, time, pyodbc
@@ -93,7 +92,7 @@ jobs:
 
       - name: Oracle temporal - esquema real (Flyway V1) y carga dos veces
         env:
-          ORACLE_CONTRASENA: ${{ env.CLAVE_TEMPORAL }}
+          ORACLE_CONTRASENA: Tmp-${{ github.run_id }}-${{ github.run_attempt }}x
         run: |
           CP="$RUNNER_TEMP/jdbc/ojdbc11.jar:$RUNNER_TEMP/jdbc/oraclepki.jar"
           URL="jdbc:oracle:thin:@localhost:1521/FREEPDB1"
