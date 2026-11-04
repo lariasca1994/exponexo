@@ -72,10 +72,13 @@ PY
     mkdir -p "$TMP/$f" && : > "$TMP/$f/__init__.py"
     printf 'def handler(event, context=None):\n    return {"batchItemFailures": []}\n' > "$TMP/$f/funcion.py"
     (cd "$TMP" && python3 -c "import shutil; shutil.make_archive('codigo', 'zip', '.', '$f')")
+    ZIP="$TMP/codigo.zip"
+    # En Git Bash (Windows) la AWS CLI necesita la ruta en formato Windows
+    command -v cygpath >/dev/null && ZIP=$(cygpath -w "$ZIP")
     for intento in 1 2 3 4 5 6; do   # el rol recién creado puede tardar en ser asumible
       aws lambda create-function --function-name "exponexo-$f" --runtime python3.14 \
         --handler "$f.funcion.handler" --role "arn:aws:iam::$CUENTA:role/$ROL" \
-        --zip-file "fileb://$TMP/codigo.zip" --timeout 30 --memory-size 256 >/dev/null && break
+        --zip-file "fileb://$ZIP" --timeout 30 --memory-size 256 >/dev/null && break
       [ "$intento" = 6 ] && exit 1
       sleep 10
     done
