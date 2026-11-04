@@ -202,7 +202,7 @@ class Settings(BaseSettings):
             f"DATABASE={self.sqlserver_database};"
             f"UID={self.sqlserver_user};"
             f"PWD={self.sqlserver_password};"
-            "Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
+            "Encrypt=yes;TrustServerCertificate=no;"
         )
         return f"mssql+pyodbc:///?odbc_connect={quote_plus(odbc_str)}"
 

@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
-from app.db import Base
+from app.db import SQLSERVER_LOGIN_TIMEOUT_SECONDS, Base
 import app.models  # noqa: F401
 
 
@@ -30,10 +30,12 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    url = config.get_main_option("sqlalchemy.url") or ""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={} if url.startswith("sqlite") else {"timeout": SQLSERVER_LOGIN_TIMEOUT_SECONDS},
     )
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)

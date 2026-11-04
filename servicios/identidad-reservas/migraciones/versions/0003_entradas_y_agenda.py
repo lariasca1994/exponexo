@@ -173,9 +173,8 @@ def upgrade() -> None:
 
                 SELECT TOP 1 @sala_id = s.id
                 FROM dbo.salas s WITH (UPDLOCK, HOLDLOCK)
-                INNER JOIN dbo.pabellones p ON p.id = s.pabellon_id
-                WHERE p.evento_id = @evento_id
-                  AND NOT EXISTS (
+                -- Las salas son del recinto (no de un evento): sirve cualquiera libre en ese horario
+                WHERE NOT EXISTS (
                       SELECT 1
                       FROM dbo.citas c
                       WHERE c.sala_id = s.id

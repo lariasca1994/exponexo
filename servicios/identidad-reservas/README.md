@@ -38,6 +38,8 @@ docker build -t exponexo-identidad .
 
 `.github/workflows/identidad-reservas.yml` prueba con Python 3.14 y SQLite. En `main`, publica en
 GHCR y actualiza Azure Container Apps mediante OIDC, con su configuración como secretos de la
-Container App. Al arrancar, el contenedor escribe la llave JWT desde `JWT_CLAVE_PRIVADA_PEM`, aplica
-las migraciones pendientes (`alembic upgrade head`) y levanta la API; si algo falla, no arranca.
+Container App. Antes de publicar la revisión, el workflow aplica las migraciones pendientes en
+Azure SQL (`alembic upgrade head`, con reintentos mientras la base despierta). Al arrancar, el
+contenedor escribe la llave JWT desde `JWT_CLAVE_PRIVADA_PEM` y levanta la API; si la configuración
+es inválida, no arranca.
 La bandeja de salida se publica cada 15 segundos en el tema SNS (`SNS_TEMA_EVENTOS_ARN`).

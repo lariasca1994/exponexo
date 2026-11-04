@@ -6,13 +6,20 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.config import get_settings
 
 
+SQLSERVER_LOGIN_TIMEOUT_SECONDS = 90
+
+
 class Base(DeclarativeBase):
     pass
 
 
 def build_engine(database_uri: str | None = None):
     uri = database_uri or get_settings().sqlalchemy_database_uri
-    connect_args = {"check_same_thread": False} if uri.startswith("sqlite") else {}
+    if uri.startswith("sqlite"):
+        connect_args = {"check_same_thread": False}
+    else:
+        # Azure SQL sin uso se pausa y tarda hasta un minuto en despertar: tiempo de ingreso amplio
+        connect_args = {"timeout": SQLSERVER_LOGIN_TIMEOUT_SECONDS}
     return create_engine(uri, pool_pre_ping=True, connect_args=connect_args)
 
 

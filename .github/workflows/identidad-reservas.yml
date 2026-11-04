@@ -116,6 +116,38 @@ jobs:
             echo "::notice::La imagen GHCR debe ser pública o la Container App debe tener credenciales de registry configuradas."
           fi
 
+      - name: Configurar Python para las migraciones
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Aplicar migraciones en Azure SQL
+        # Se aplican aquí y no al arrancar el contenedor: así arranca rápido y Azure no lo reinicia
+        # mientras migra. La base escala a cero: el primer intento la despierta y puede fallar
+        # con tiempo agotado, por eso se reintenta.
+        working-directory: servicios/identidad-reservas
+        env:
+          APP_ENTORNO: migracion
+          SQLSERVER_SERVIDOR: ${{ secrets.SQLSERVER_SERVIDOR }}
+          SQLSERVER_BASE: ${{ secrets.SQLSERVER_BASE }}
+          SQLSERVER_USUARIO: ${{ secrets.SQLSERVER_USUARIO }}
+          SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
+          SQLSERVER_DRIVER_ODBC: ODBC Driver 18 for SQL Server
+        run: |
+          if ! odbcinst -q -d | grep -q "ODBC Driver 18 for SQL Server"; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" \
+              | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+            sudo apt-get update -q && sudo ACCEPT_EULA=Y apt-get install -y -q msodbcsql18 unixodbc-dev
+          fi
+          python -m pip install -q -r requirements.txt
+          for intento in 1 2 3 4 5; do
+            python -m alembic upgrade head && exit 0
+            echo "::warning::Intento $intento de migración falló (la base puede estar despertando); reintento en 30 s"
+            sleep 30
+          done
+          exit 1
+
       - name: Desplegar imagen y configuración en Azure Container Apps
         # Secretos de la Container App (gratis, cifrados) + variables + imagen en una sola revisión
         env:
