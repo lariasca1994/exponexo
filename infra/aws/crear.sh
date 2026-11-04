@@ -100,12 +100,14 @@ aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$PROVEEDOR"
   aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com \
     --client-id-list sts.amazonaws.com >/dev/null
 ROL_DESPLIEGUE=exponexo-github-despliegue
+# Sujeto clásico (dueño/repo) y el que incluye IDs numéricos (dueño@id/repo@id): se aceptan ambos
+IDS=$(gh api "repos/$REPO" -q '"\(.owner.login)@\(.owner.id)/\(.name)@\(.id)"')
 CONFIANZA="{
   \"Version\": \"2012-10-17\",
   \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Federated\": \"$PROVEEDOR\"},
     \"Action\": \"sts:AssumeRoleWithWebIdentity\",
     \"Condition\": {\"StringEquals\": {\"token.actions.githubusercontent.com:aud\": \"sts.amazonaws.com\",
-      \"token.actions.githubusercontent.com:sub\": \"repo:$REPO:environment:produccion\"}}}]}"
+      \"token.actions.githubusercontent.com:sub\": [\"repo:$REPO:environment:produccion\", \"repo:$IDS:environment:produccion\"]}}}]}"
 if aws iam get-role --role-name "$ROL_DESPLIEGUE" >/dev/null 2>&1; then
   aws iam update-assume-role-policy --role-name "$ROL_DESPLIEGUE" --policy-document "$CONFIANZA"
 else

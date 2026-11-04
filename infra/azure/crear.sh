@@ -58,14 +58,20 @@ if [ -z "$APP_ID" ]; then
   APP_ID=$(az ad app create --display-name exponexo-github-despliegue --query appId --output tsv)
   az ad sp create --id "$APP_ID" --output none
 fi
-CREDENCIAL=$(az ad app federated-credential list --id "$APP_ID" --query "[?name=='github-produccion'] | length(@)" --output tsv)
-if [ "$CREDENCIAL" = "0" ]; then
-  az ad app federated-credential create --id "$APP_ID" --parameters "{
-    \"name\": \"github-produccion\",
-    \"issuer\": \"https://token.actions.githubusercontent.com\",
-    \"subject\": \"repo:$REPO:environment:produccion\",
-    \"audiences\": [\"api://AzureADTokenExchange\"]}" --output none
-fi
+# GitHub firma el token con el sujeto clásico (dueño/repo) o con el que incluye los IDs numéricos
+# (dueño@id/repo@id); se registran ambos para que el inicio de sesión funcione en los dos casos.
+IDS=$(gh api "repos/$REPO" -q '"\(.owner.login)@\(.owner.id)/\(.name)@\(.id)"')
+declare -A SUJETOS=([github-produccion]="repo:$REPO:environment:produccion" [github-produccion-ids]="repo:$IDS:environment:produccion")
+for nombre in "${!SUJETOS[@]}"; do
+  EXISTE=$(az ad app federated-credential list --id "$APP_ID" --query "[?name=='$nombre'] | length(@)" --output tsv)
+  if [ "$EXISTE" = "0" ]; then
+    az ad app federated-credential create --id "$APP_ID" --parameters "{
+      \"name\": \"$nombre\",
+      \"issuer\": \"https://token.actions.githubusercontent.com\",
+      \"subject\": \"${SUJETOS[$nombre]}\",
+      \"audiences\": [\"api://AzureADTokenExchange\"]}" --output none
+  fi
+done
 for intento in 1 2 3 4 5 6; do   # el principal recién creado tarda en verse
   az role assignment create --assignee "$APP_ID" --role Contributor \
     --scope "/subscriptions/$SUSCRIPCION/resourceGroups/$GRUPO" --only-show-errors --output none && break
