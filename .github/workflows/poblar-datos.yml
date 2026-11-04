@@ -1,0 +1,179 @@
+name: Poblar datos de demostración
+
+# Carga manual de los datos de demostración (datos-demo/) en las tres bases de producción.
+# 1. "validar" ejecuta los tres scripts dos veces contra bases temporales dentro del runner
+#    (SQL Server, Oracle Free y MongoDB en contenedores): comprueba que funcionan, que son
+#    idempotentes y que los datos son coherentes, sin gastar la cuota gratuita de las bases reales.
+# 2. "cargar" solo corre si la validación pasó: una ejecución por base en producción.
+on:
+  workflow_dispatch:
+    inputs:
+      cargar_en_produccion:
+        description: 'Después de validar, cargar en producción'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  VERSION_ORACLE_JDBC: 23.26.3.0.0
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: Prueba-Local-2026!
+        ports: ['1433:1433']
+      oracle:
+        image: gvenzl/oracle-free:23-slim-faststart
+        env:
+          ORACLE_PASSWORD: PruebaLocal2026
+          APP_USER: pagos
+          APP_USER_PASSWORD: PruebaLocal2026
+        ports: ['1521:1521']
+        options: --health-cmd healthcheck.sh --health-interval 10s --health-timeout 5s --health-retries 30
+      mongo:
+        image: mongo:8
+        ports: ['27017:27017']
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+
+      - name: Herramientas (driver ODBC 18, Oracle JDBC y mongosh)
+        run: |
+          if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" \
+              | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+            sudo apt-get update -q && sudo ACCEPT_EULA=Y apt-get install -y -q msodbcsql18 unixodbc-dev
+          fi
+          python -m pip install -q -r servicios/identidad-reservas/requirements.txt
+          mkdir -p "$RUNNER_TEMP/jdbc"
+          for a in jdbc/ojdbc11 security/oraclepki; do
+            n=${a#*/}
+            curl -fsSL -o "$RUNNER_TEMP/jdbc/$n.jar" \
+              "https://repo1.maven.org/maven2/com/oracle/database/$a/$VERSION_ORACLE_JDBC/$n-$VERSION_ORACLE_JDBC.jar"
+          done
+          npm install -g --silent mongosh
+
+      - name: SQL Server temporal - esquema real (migraciones) y carga dos veces
+        working-directory: servicios/identidad-reservas
+        env:
+          APP_ENTORNO: migracion
+          ODBC_LOCAL: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;UID=sa;PWD=Prueba-Local-2026!;Encrypt=yes;TrustServerCertificate=yes'
+        run: |
+          python - <<'PY'
+          import os, time, pyodbc
+          for _ in range(30):
+              try:
+                  c = pyodbc.connect(os.environ["ODBC_LOCAL"], autocommit=True, timeout=5); break
+              except pyodbc.Error:
+                  time.sleep(5)
+          c.execute("IF DB_ID('exponexodb') IS NULL CREATE DATABASE exponexodb")
+          PY
+          export DATABASE_URL="mssql+pyodbc:///?odbc_connect=$(python -c "import os,urllib.parse;print(urllib.parse.quote_plus(os.environ['ODBC_LOCAL']+';DATABASE=exponexodb'))")"
+          python -m alembic upgrade head
+          python ../../datos-demo/cargar_sqlserver.py "$ODBC_LOCAL;DATABASE=exponexodb"
+          python ../../datos-demo/cargar_sqlserver.py "$ODBC_LOCAL;DATABASE=exponexodb"
+
+      - name: Oracle temporal - esquema real (Flyway V1) y carga dos veces
+        env:
+          ORACLE_CONTRASENA: PruebaLocal2026
+        run: |
+          CP="$RUNNER_TEMP/jdbc/ojdbc11.jar:$RUNNER_TEMP/jdbc/oraclepki.jar"
+          URL="jdbc:oracle:thin:@localhost:1521/FREEPDB1"
+          java -cp "$CP" datos-demo/CargarOracle.java "$URL" pagos servicios/pagos/src/main/resources/db/migration/common/V1__esquema_pagos_y_facturacion.sql
+          java -cp "$CP" datos-demo/CargarOracle.java "$URL" pagos datos-demo/pagos.sql --verificar
+          java -cp "$CP" datos-demo/CargarOracle.java "$URL" pagos datos-demo/pagos.sql --verificar
+
+      - name: MongoDB temporal - carga dos veces
+        run: |
+          for vez in 1 2; do
+            mongosh "mongodb://localhost:27017/exponexo" --quiet --eval "var ASIGNADOS=['prueba-personal','prueba-admin']" --file datos-demo/mesa-ayuda.js
+          done
+          mongosh "mongodb://localhost:27017/exponexo" --quiet --eval '
+            const t = db.tickets.countDocuments(), d = db.dispositivos.countDocuments(), l = db.lecturas_dispositivo.countDocuments();
+            const repetidos = db.tickets.aggregate([{ $group: { _id: "$numero", c: { $sum: 1 } } }, { $match: { c: { $gt: 1 } } }]).toArray().length;
+            const serie = db.getCollectionInfos({ name: "lecturas_dispositivo" })[0].type;
+            printjson({ tickets: t, dispositivos: d, lecturas: l, numeros_repetidos: repetidos, tipo_lecturas: serie });
+            if (t !== 30 || d !== 12 || l !== 200 || repetidos !== 0 || serie !== "timeseries") quit(1);'
+
+  cargar:
+    needs: validar
+    if: inputs.cargar_en_produccion
+    runs-on: ubuntu-latest
+    environment: produccion
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+
+      - name: Herramientas (driver ODBC 18, Oracle JDBC y mongosh)
+        run: |
+          if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" \
+              | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+            sudo apt-get update -q && sudo ACCEPT_EULA=Y apt-get install -y -q msodbcsql18 unixodbc-dev
+          fi
+          python -m pip install -q pyodbc
+          mkdir -p "$RUNNER_TEMP/jdbc"
+          for a in jdbc/ojdbc11 security/oraclepki; do
+            n=${a#*/}
+            curl -fsSL -o "$RUNNER_TEMP/jdbc/$n.jar" \
+              "https://repo1.maven.org/maven2/com/oracle/database/$a/$VERSION_ORACLE_JDBC/$n-$VERSION_ORACLE_JDBC.jar"
+          done
+          npm install -g --silent mongosh
+
+      - name: Identidad (Azure SQL)
+        env:
+          SQLSERVER_SERVIDOR: ${{ secrets.SQLSERVER_SERVIDOR }}
+          SQLSERVER_BASE: ${{ secrets.SQLSERVER_BASE }}
+          SQLSERVER_USUARIO: ${{ secrets.SQLSERVER_USUARIO }}
+          SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
+        run: |
+          python datos-demo/cargar_sqlserver.py \
+            "DRIVER={ODBC Driver 18 for SQL Server};SERVER=tcp:$SQLSERVER_SERVIDOR,1433;DATABASE=$SQLSERVER_BASE;UID=$SQLSERVER_USUARIO;PWD={$SQLSERVER_CONTRASENA};Encrypt=yes;TrustServerCertificate=no" \
+            --asignados "$RUNNER_TEMP/asignados.js"
+
+      - name: Pagos (Oracle)
+        env:
+          ORACLE_TNS_ALIAS: ${{ secrets.ORACLE_TNS_ALIAS }}
+          ORACLE_USUARIO: ${{ secrets.ORACLE_USUARIO }}
+          ORACLE_CONTRASENA: ${{ secrets.ORACLE_CONTRASENA }}
+          ORACLE_WALLET_ZIP_BASE64: ${{ secrets.ORACLE_WALLET_ZIP_BASE64 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/wallet" && echo "$ORACLE_WALLET_ZIP_BASE64" | base64 -d > "$RUNNER_TEMP/wallet.zip"
+          unzip -q -o "$RUNNER_TEMP/wallet.zip" -d "$RUNNER_TEMP/wallet" && rm "$RUNNER_TEMP/wallet.zip"
+          CP="$RUNNER_TEMP/jdbc/ojdbc11.jar:$RUNNER_TEMP/jdbc/oraclepki.jar"
+          java -cp "$CP" datos-demo/CargarOracle.java \
+            "jdbc:oracle:thin:@$ORACLE_TNS_ALIAS?TNS_ADMIN=$RUNNER_TEMP/wallet" "$ORACLE_USUARIO" datos-demo/pagos.sql --verificar
+          rm -rf "$RUNNER_TEMP/wallet"
+
+      - name: Mesa de ayuda (MongoDB Atlas)
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_BASE: ${{ secrets.MONGO_BASE }}
+        run: |
+          mongosh "$MONGO_URI" --quiet --eval "db = db.getSiblingDB('$MONGO_BASE'); $(cat "$RUNNER_TEMP/asignados.js")" \
+            --file datos-demo/mesa-ayuda.js
