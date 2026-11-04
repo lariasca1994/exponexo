@@ -134,8 +134,8 @@ jobs:
           SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
           SQLSERVER_DRIVER_ODBC: ODBC Driver 18 for SQL Server
         run: |
-          if ! odbcinst -q -d | grep -q "ODBC Driver 18 for SQL Server"; then
-            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+          if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
             echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" \
               | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
             sudo apt-get update -q && sudo ACCEPT_EULA=Y apt-get install -y -q msodbcsql18 unixodbc-dev
