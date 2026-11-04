@@ -51,3 +51,6 @@ obj/
 test-results/
 playwright-report/
 .tsupgrader/
+
+# Vercel (vínculo local del CLI)
+.vercel/
