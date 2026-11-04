@@ -99,7 +99,10 @@ def test_repartidor_partial_batch_failure_reports_only_failed_record() -> None:
     assert dispatched_ids == ["evt-bueno-1", "evt-bueno-2"]
 
 
-def test_avisos_idempotency_and_sensitive_data_guard() -> None:
+def test_avisos_idempotency_and_sensitive_data_guard(monkeypatch) -> None:
+    # Sin credenciales los avisos se simulan: la prueba nunca debe enviar correos ni mensajes reales
+    for name in ("BREVO_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+        monkeypatch.delenv(name, raising=False)
     reset_processed_events()
 
     good_event = {

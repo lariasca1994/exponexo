@@ -3,7 +3,8 @@ namespace MesaAyuda.Api.Configuracion;
 public sealed class MesaAyudaOptions
 {
     public const string DevelopmentEnrollmentCode = "EXN-KIOSCO-2026";
-    public const string DevelopmentInternalSecret = "wZLrMGbejQbI7QzZEXGeqw00Qih-pXNr-DvMNJJcw6o";
+    // Solo para desarrollo local: en producción se rechaza (ValidateForEnvironment)
+    public const string DevelopmentInternalSecret = "desarrollo-interno-no-usar-en-produccion";
 
     public string MongoUri { get; set; } = "mongodb+srv://TU_USUARIO:TU_CONTRASENA@TU_CLUSTER.mongodb.net";
     public string MongoBase { get; set; } = "exponexo_mesa";

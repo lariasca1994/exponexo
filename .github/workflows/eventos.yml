@@ -47,10 +47,6 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Ejecutar pruebas
-        env:
-          BREVO_API_KEY: fake-ci-key
-          TELEGRAM_BOT_TOKEN: fake-bot-token
-          TELEGRAM_CHAT_ID: fake-chat-id
         run: python -m pytest pruebas -v
 
   desplegar:
