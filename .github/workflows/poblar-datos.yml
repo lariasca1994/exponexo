@@ -22,8 +22,7 @@ env:
 
 jobs:
   validar:
-    # MongoDB 8 no arranca con el kernel 6.19+ de las imágenes nuevas (SERVER-121912)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -40,7 +39,9 @@ jobs:
         ports: ['1521:1521']
         options: --health-cmd healthcheck.sh --health-interval 10s --health-timeout 5s --health-retries 30
       mongo:
-        image: mongo:8
+        # Solo para validar: MongoDB 7+ no arranca con el kernel 6.19 de los runners
+        # (SERVER-121912). Producción usa Atlas; 6.0 ya soporta series de tiempo.
+        image: mongo:6.0
         ports: ['27017:27017']
     steps:
       - uses: actions/checkout@v7

@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import { SessionProvider } from "./sesion/almacenSesion";
 import "./estilos/tokens.css";
+import "./estilos/base.css";
+import "./estilos/layout.css";
+import "./estilos/componentes.css";
+import "./estilos/acceso.css";
 
 const queryClient = new QueryClient();
 

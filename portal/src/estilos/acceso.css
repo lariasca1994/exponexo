@@ -1,0 +1,335 @@
+/* =============================================================================
+   Acceso: ingreso, registro y verificación en dos pasos.
+   Formulario a la izquierda y panel de marca a la derecha (estructura del
+   portafolio) con la paleta tricolor de las bases de datos.
+   ============================================================================= */
+
+.login-page {
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  width: min(1160px, 100%);
+  min-height: min(690px, calc(100dvh - 120px));
+  margin: 0 auto;
+  padding: var(--esp-8) var(--esp-6);
+}
+
+.login-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-right: 0;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  animation: login-panel-enter 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.login-form-content {
+  width: 100%;
+  max-width: 390px;
+  margin: var(--esp-8) auto;
+}
+
+.login-step {
+  margin: 0 0 var(--esp-3);
+  font-size: var(--texto-xs);
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+  animation: login-content-enter 0.5s ease-out 0.15s both;
+}
+
+.login-step span {
+  padding: 0 var(--esp-1);
+  color: var(--text-muted);
+}
+
+.login-form-content h1 {
+  margin: 0;
+  font-size: clamp(1.85rem, 3vw, 2.35rem);
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+  animation: login-content-enter 0.55s ease-out 0.22s both;
+}
+
+.login-description {
+  margin: var(--esp-3) 0 var(--esp-8);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  animation: login-content-enter 0.55s ease-out 0.3s both;
+}
+
+.login-form-content .form-group {
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-5);
+  animation: login-content-enter 0.55s ease-out 0.38s both;
+}
+
+.login-form-content .form-group + .form-group {
+  animation-delay: 0.46s;
+}
+
+.login-form-content .input-field {
+  min-height: 48px;
+}
+
+.login-security-note {
+  margin: 0 0 var(--esp-4);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  animation: login-content-enter 0.55s ease-out 0.52s both;
+}
+
+.login-submit {
+  width: 100%;
+  min-height: 48px;
+  animation: login-content-enter 0.55s ease-out 0.58s both;
+}
+
+.login-register {
+  margin: var(--esp-6) 0 0;
+  font-size: 0.9rem;
+  text-align: center;
+  color: var(--text-secondary);
+  animation: login-content-enter 0.55s ease-out 0.66s both;
+}
+
+.login-register a {
+  font-weight: 700;
+}
+
+.login-panel-footer {
+  margin: 0;
+  font-size: var(--texto-xs);
+  color: var(--text-muted);
+  animation: login-content-enter 0.55s ease-out 0.72s both;
+}
+
+/* ---- Panel de marca ------------------------------------------------------ */
+.login-story {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(2rem, 5vw, 4rem);
+  color: #f3f4f6;
+  background:
+    radial-gradient(ellipse at 92% 6%, rgba(255, 138, 128, 0.2), transparent 40%),
+    radial-gradient(ellipse at 8% 96%, rgba(0, 237, 100, 0.14), transparent 42%),
+    linear-gradient(150deg, #111827 0%, #161f33 55%, #1b2238 100%);
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  animation: login-panel-enter 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+}
+
+/* Franja tricolor superior */
+.login-story::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, #cc2927 0 33.3%, #c74634 33.3% 66.6%, #00684a 66.6%);
+}
+
+.login-story-content,
+.login-story-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.login-story-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #ff8a80;
+  animation: login-content-enter 0.55s ease-out 0.28s both;
+}
+
+.login-story-eyebrow::before {
+  content: "";
+  width: 1.45rem;
+  height: 1px;
+  background: currentColor;
+}
+
+.login-story h2 {
+  max-width: 440px;
+  margin: var(--esp-5) 0 var(--esp-3);
+  font-size: clamp(2rem, 4vw, 3.15rem);
+  line-height: 1.04;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+  animation: login-content-enter 0.6s ease-out 0.38s both;
+}
+
+.login-story-content > p {
+  max-width: 420px;
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: #c3cad6;
+  animation: login-content-enter 0.55s ease-out 0.48s both;
+}
+
+.login-benefits {
+  display: grid;
+  gap: var(--esp-5);
+  margin: var(--esp-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.login-benefits li {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  align-items: center;
+  gap: var(--esp-4);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #c3cad6;
+  opacity: 0;
+  animation: login-benefit-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.login-benefits li:nth-child(1) { --color-beneficio: #ff8a80; animation-delay: 0.58s; }
+.login-benefits li:nth-child(2) { --color-beneficio: #f4a090; animation-delay: 0.72s; }
+.login-benefits li:nth-child(3) { --color-beneficio: #00ed64; animation-delay: 0.86s; }
+
+.login-benefits li > span:last-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.login-benefits strong {
+  font-size: 0.94rem;
+  color: #ffffff;
+}
+
+.login-benefit-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 750;
+  color: var(--color-beneficio, #ff8a80);
+  background: color-mix(in srgb, var(--color-beneficio, #ff8a80) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-beneficio, #ff8a80) 35%, transparent);
+  border-radius: 0.8rem;
+}
+
+.login-story-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  margin-top: var(--esp-8);
+  font-size: 0.75rem;
+  color: #c3cad6;
+  animation: login-content-enter 0.55s ease-out 1s both;
+}
+
+.login-story-footer span[aria-hidden="true"] {
+  color: #ff8a80;
+}
+
+.login-story-orbit {
+  position: absolute;
+  width: 20rem;
+  height: 20rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.login-story-orbit-one {
+  top: -11rem;
+  right: -9rem;
+  animation: login-orbit-float 10s ease-in-out 0.5s infinite alternate;
+}
+
+.login-story-orbit-two {
+  top: -8rem;
+  right: -6rem;
+  width: 14rem;
+  height: 14rem;
+  animation: login-orbit-float 12s ease-in-out 0.7s infinite alternate-reverse;
+}
+
+@keyframes login-panel-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes login-content-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes login-benefit-enter {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes login-orbit-float {
+  from { transform: translate3d(0, 0, 0) scale(0.98); }
+  to { transform: translate3d(-12px, 10px, 0) scale(1.04); }
+}
+
+/* ---- Responsive ---------------------------------------------------------- */
+@media (max-width: 1050px) {
+  .login-page {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .login-page {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 560px;
+    min-height: 0;
+    padding: var(--esp-5);
+  }
+
+  .login-panel {
+    min-height: 600px;
+    border-right: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+  }
+
+  .login-story {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-page {
+    padding: var(--esp-3);
+  }
+
+  .login-panel {
+    padding: var(--esp-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page *,
+  .login-page *::before,
+  .login-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .login-benefits li {
+    opacity: 1;
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { identityApi } from "./api/clienteIdentidad";
 import { Ingreso } from "./paginas/acceso/Ingreso";
 import { Portada } from "./paginas/acceso/Portada";
@@ -70,32 +70,32 @@ export function App() {
         </Link>
 
         <nav className="nav-links">
-          <Link to="/eventos">Eventos</Link>
+          <NavLink to="/eventos">Eventos</NavLink>
           {user ? (
             <>
-              <Link to="/inicio">Inicio</Link>
-              {user.rol === "expositor" && <Link to="/reservas">Mis Reservas</Link>}
+              <NavLink to="/inicio">Inicio</NavLink>
+              {user.rol === "expositor" && <NavLink to="/reservas">Mis Reservas</NavLink>}
               {(user.rol === "visitante" || user.rol === "expositor") && (
                 <>
-                  <Link to="/mis-entradas">Mis Entradas</Link>
-                  <Link to="/agenda">Agenda B2B</Link>
-                  <Link to="/facturas">Facturas</Link>
+                  <NavLink to="/mis-entradas">Mis Entradas</NavLink>
+                  <NavLink to="/agenda">Agenda B2B</NavLink>
+                  <NavLink to="/facturas">Facturas</NavLink>
                 </>
               )}
-              <Link to="/soporte/tickets">Mesa de Ayuda</Link>
+              <NavLink to="/soporte/tickets">Mesa de Ayuda</NavLink>
               {(user.rol === "personal" || user.rol === "administrador") && (
                 <>
-                  <Link to="/puerta/validar-qr">Validar QR</Link>
-                  <Link to="/soporte/dispositivos">Dispositivos</Link>
+                  <NavLink to="/puerta/validar-qr">Validar QR</NavLink>
+                  <NavLink to="/soporte/dispositivos">Dispositivos</NavLink>
                 </>
               )}
               {user.rol === "administrador" && (
                 <>
-                  <Link to="/admin/tablero">Tablero</Link>
-                  <Link to="/admin/catalogo">Catálogo</Link>
+                  <NavLink to="/admin/tablero">Tablero</NavLink>
+                  <NavLink to="/admin/catalogo">Catálogo</NavLink>
                 </>
               )}
-              <Link to="/perfil/seguridad">Seguridad</Link>
+              <NavLink to="/perfil/seguridad">Seguridad</NavLink>
               <span className="badge">
                 {user.nombre} ({user.rol})
               </span>
@@ -105,8 +105,8 @@ export function App() {
             </>
           ) : (
             <>
-              <Link to="/ingreso">Ingresar</Link>
-              <Link to="/registro">Crear cuenta</Link>
+              <NavLink to="/ingreso">Ingresar</NavLink>
+              <NavLink to="/registro">Crear cuenta</NavLink>
             </>
           )}
           <button
@@ -120,7 +120,7 @@ export function App() {
         </nav>
       </header>
 
-      <main style={{ flex: 1 }}>
+      <main>
         <Routes>
           <Route path="/" element={<Portada />} />
           <Route path="/registro" element={<Registro />} />
