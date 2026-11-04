@@ -6,11 +6,13 @@ on:
     paths:
       - 'servicios/eventos/**'
       - '.github/workflows/eventos.yml'
+      - '.github/scripts/variables_ejecucion.py'
   pull_request:
     branches: [main]
     paths:
       - 'servicios/eventos/**'
       - '.github/workflows/eventos.yml'
+      - '.github/scripts/variables_ejecucion.py'
   workflow_dispatch:
 
 permissions:
@@ -27,27 +29,29 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
           cache: 'pip'
-          cache-dependency-path: servicios/eventos/requirements.txt
+          cache-dependency-path: |
+            servicios/eventos/repartidor/requirements.txt
+            servicios/eventos/avisos/requirements.txt
+            servicios/eventos/requirements-dev.txt
 
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
+          pip install -r requirements-dev.txt
 
       - name: Ejecutar pruebas
         env:
           BREVO_API_KEY: fake-ci-key
           TELEGRAM_BOT_TOKEN: fake-bot-token
           TELEGRAM_CHAT_ID: fake-chat-id
-        run: pytest pruebas -v
+        run: python -m pytest pruebas -v
 
   desplegar:
     name: Empaquetar y Desplegar Funciones Lambda
@@ -61,32 +65,43 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar credenciales AWS vía OIDC (Sin llaves permanentes)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Empaquetar función Repartidor
         run: |
-          mkdir -p paquete_repartidor
-          pip install -r requirements.txt -t paquete_repartidor
-          cp repartidor.py paquete_repartidor/
-          cd paquete_repartidor && zip -r ../repartidor.zip . && cd ..
+          mkdir -p paquete_repartidor/repartidor
+          python -m pip install -r repartidor/requirements.txt -t paquete_repartidor
+          touch paquete_repartidor/repartidor/__init__.py
+          cp repartidor/funcion.py repartidor/rutas.py paquete_repartidor/repartidor/
+          (cd paquete_repartidor && zip -qr ../repartidor.zip .)
 
       - name: Empaquetar función Avisos
         run: |
-          mkdir -p paquete_avisos
-          pip install -r requirements.txt -t paquete_avisos
-          cp avisos.py paquete_avisos/
-          cd paquete_avisos && zip -r ../avisos.zip . && cd ..
+          mkdir -p paquete_avisos/avisos
+          python -m pip install -r avisos/requirements.txt -t paquete_avisos
+          touch paquete_avisos/avisos/__init__.py
+          cp avisos/funcion.py avisos/correo.py avisos/telegram.py paquete_avisos/avisos/
+          cp -R avisos/plantillas paquete_avisos/avisos/
+          (cd paquete_avisos && zip -qr ../avisos.zip .)
+
+      - name: Configurar entrypoint de Repartidor
+        run: |
+          aws lambda update-function-configuration \
+            --function-name exponexo-repartidor \
+            --runtime python3.14 \
+            --handler repartidor.funcion.handler
+          aws lambda wait function-updated-v2 --function-name exponexo-repartidor
 
       - name: Desplegar exponexo-repartidor en AWS Lambda
         run: |
@@ -94,13 +109,39 @@ jobs:
             --function-name exponexo-repartidor \
             --zip-file fileb://repartidor.zip
 
+      - name: Configurar entrypoint de Avisos
+        run: |
+          aws lambda update-function-configuration \
+            --function-name exponexo-avisos \
+            --runtime python3.14 \
+            --handler avisos.funcion.handler
+          aws lambda wait function-updated-v2 --function-name exponexo-avisos
+
       - name: Desplegar exponexo-avisos en AWS Lambda
         run: |
           aws lambda update-function-code \
             --function-name exponexo-avisos \
             --zip-file fileb://avisos.zip
+          aws lambda wait function-updated-v2 --function-name exponexo-avisos
 
-      - name: Configurar retención de logs en CloudWatch (14 días)
+      - name: Configurar variables de las funciones
+        env:
+          INTERNO_SECRETO: ${{ secrets.INTERNO_SECRETO }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_REMITENTE_CORREO: ${{ secrets.BREVO_REMITENTE_CORREO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
+          PAGOS_URL: ${{ vars.PAGOS_URL }}
+          MESA_AYUDA_URL: ${{ vars.MESA_AYUDA_URL }}
+          PORTAL_URL: ${{ vars.PORTAL_URL }}
         run: |
-          aws logs put-retention-policy --log-group-name /aws/lambda/exponexo-repartidor --retention-in-days 14 || true
-          aws logs put-retention-policy --log-group-name /aws/lambda/exponexo-avisos --retention-in-days 14 || true
+          python3 ../../.github/scripts/variables_ejecucion.py eventos exponexo-repartidor
+          python3 ../../.github/scripts/variables_ejecucion.py eventos exponexo-avisos
+
+      - name: Retención de logs en CloudWatch (14 días, para no acumular)
+        run: |
+          for funcion in exponexo-repartidor exponexo-avisos; do
+            aws logs create-log-group --log-group-name "/aws/lambda/$funcion" 2>/dev/null || true
+            aws logs put-retention-policy --log-group-name "/aws/lambda/$funcion" --retention-in-days 14
+          done

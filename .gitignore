@@ -33,6 +33,7 @@ node_modules/
 dist/
 coverage/
 package-lock.json
+!portal/package-lock.json
 *.tsbuildinfo
 
 # Java / Spring Boot
@@ -49,3 +50,4 @@ obj/
 # Pruebas E2E
 test-results/
 playwright-report/
+.tsupgrader/

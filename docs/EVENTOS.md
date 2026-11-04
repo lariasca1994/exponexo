@@ -1,57 +1,93 @@
-# Catálogo de eventos de ExpoNexo
+# Eventos entre servicios
 
-Los servicios no se llaman entre sí: publican **eventos** en una cola y quien está interesado los
-consume. Este catálogo dice qué eventos existen, quién los publica, quién los consume y qué datos
-llevan.
+Este catálogo define la **convención objetivo** para eventos nuevos o migrados. Los productores y
+consumidores actuales todavía usan identificadores y sobres en español; esta página no afirma que
+el formato objetivo ya esté desplegado.
 
-## 1. Forma común de un evento (sobre)
+## Sobre objetivo
 
-Todo evento viaja con los mismos campos de cabecera; solo cambia `datos`:
-
-| Campo | Descripción |
+| Campo JSON | Descripción |
 |---|---|
-| id | Identificador único global del evento (sirve para la idempotencia). |
-| tipo | Nombre `entidad.accion` en pasado. |
-| version | Versión del formato de `datos` (empieza en 1). |
-| ocurrido_en | Fecha y hora UTC. |
-| origen | Servicio que lo publicó. |
-| correlacion_id | Para seguir la operación de punta a punta. |
-| datos | Contenido propio del evento (tabla de abajo). |
+| `id` | UUID estable del evento, usado para deduplicación. |
+| `type` | Nombre técnico inglés `entity.action` en pasado. |
+| `version` | Versión del esquema de `data`, empezando en 1. |
+| `occurred_at` | Fecha y hora UTC. |
+| `source` | Identificador inglés del servicio productor. |
+| `correlation_id` | Correlación de la operación. |
+| `data` | Propiedades del evento en inglés `snake_case`. |
 
-Estudia: «CloudEvents specification» (un estándar real para esta forma) y «event versioning».
+UUID nuevos de evento se generan como UUID v7 en la aplicación; al persistir, usan la
+representación correspondiente al motor (ver [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md)). No
+reemplazar IDs históricos ni derivar un ID nuevo en cada reintento.
 
-## 2. Eventos
+## Catálogo objetivo y nombres actuales documentados
 
-| Tipo | Publica | Consume | Datos principales | Efecto |
-|---|---|---|---|---|
-| `cuenta.creada` | identidad-reservas | avisos | usuario, correo, nombre | Correo de bienvenida. |
-| `reserva.creada` | identidad-reservas | avisos | reserva, evento, stand, monto, vence_en | Correo «tienes X minutos para pagar». |
-| `reserva.vencida` | identidad-reservas | avisos | reserva, stand | Correo de reserva vencida. |
-| `reserva.pagada` | identidad-reservas | avisos | reserva, evento, stand | Confirmación al expositor. |
-| `pago.aprobado` | pagos | repartidor, avisos | orden, referencia, origen, monto, factura | El repartidor marca pagada la reserva o activa la entrada; avisos envía la factura. |
-| `pago.rechazado` | pagos | avisos | orden, referencia, motivo | Aviso al comprador. |
-| `pago.reembolsado` | pagos | repartidor, avisos | orden, referencia, monto | Libera el stand o cancela la entrada. |
-| `entrada.activada` | identidad-reservas | avisos | entrada, evento | Correo con el QR de ingreso. |
-| `cita.aceptada` | identidad-reservas | avisos | cita, inicio, fin, participantes | Correo a ambas personas. |
-| `ticket.creado` | mesa-ayuda | avisos | ticket, prioridad, ubicacion | Telegram al personal si es alta o crítica. |
-| `ticket.sla_vencido` | mesa-ayuda | avisos | ticket, nivel | Telegram al personal y escalamiento. |
-| `dispositivo.caido` | mesa-ayuda | avisos | dispositivo, ubicacion, ticket | Telegram al personal. |
+Los nombres actuales de la columna izquierda se encuentran en la documentación/código existente;
+los de la derecha son la norma objetivo de ADR-012 y ADR-014. La tabla es un plan de transición,
+no una afirmación de que todos los eventos enumerados ya se produzcan en runtime.
 
-## 3. Reglas
+| Tipo actual | Tipo objetivo | Servicio productor | Consumidores/efecto previsto |
+|---|---|---|---|
+| `cuenta.creada` | `account.created` | identidad-reservas | avisos: bienvenida |
+| `reserva.creada` | `reservation.created` | identidad-reservas | avisos: recordatorio de pago |
+| `reserva.vencida` | `reservation.expired` | identidad-reservas | avisos: reserva vencida |
+| `reserva.pagada` | `reservation.paid` | identidad-reservas | avisos: confirmación |
+| `pago.aprobado` | `payment.approved` | pagos | repartidor y avisos: confirmar reserva/entrada y enviar factura |
+| `pago.rechazado` | `payment.rejected` | pagos | avisos: informar rechazo |
+| `pago.reembolsado` | `payment.refunded` | pagos | repartidor y avisos: aplicar reembolso |
+| `entrada.activada` | `admission.activated` | identidad-reservas | avisos: credencial de acceso |
+| `cita.aceptada` | `appointment.accepted` | identidad-reservas | avisos: notificar participantes |
+| `ticket.creado` | `support_ticket.created` | mesa-ayuda | avisos: notificar al personal |
+| `ticket.sla_vencido` | `support_ticket.sla_breached` | mesa-ayuda | avisos: alertar/escalar |
+| `dispositivo.caido` | `device.offline` | mesa-ayuda | avisos: alertar al personal |
 
-1. **Se publica desde la bandeja de salida**, nunca directo en la transacción (ver
-   [ARQUITECTURA.md](ARQUITECTURA.md), principio 4).
-2. **El consumidor es idempotente:** antes de actuar, revisa si el `id` ya está en
-   `eventos_procesados`.
-3. **Reintentos y cola de errores:** si un consumidor falla, la cola reintenta; tras 3 intentos el
-   mensaje pasa a la cola de errores para revisarlo a mano.
-4. **Datos mínimos:** el evento lleva lo necesario para actuar. Nunca contraseñas, códigos,
-   tokens ni datos de pago.
-5. **Cambios compatibles:** agregar campos no rompe a nadie; quitar o renombrar requiere subir
-   `version`.
+Ejemplo de `data` objetivo (nombres ilustrativos del esquema, no un mensaje actual):
 
-## 4. Qué estudiar
+```json
+{
+  "reservation_id": "UUID",
+  "event_id": "UUID",
+  "booth_id": "UUID",
+  "amount": 125000.00,
+  "expires_at": "2027-01-15T17:00:00Z"
+}
+```
 
-«transactional outbox», «at-least-once delivery», «idempotent consumer», «Amazon SQS
-visibility timeout», «dead-letter queue redrive», «AWS Lambda SQS batch size partial batch
-response».
+Los valores reales deben definirse en el esquema de cada evento. Nunca incluir contraseñas,
+códigos de acceso, tokens, secretos ni datos completos de pago. La información de una persona se
+limita a lo estrictamente necesario para el consumidor autorizado.
+
+## Compatibilidad y versionado
+
+1. Identificar productores, consumidores, colas, DLQ, registros de deduplicación y cualquier
+   replay/retención antes de cambiar el nombre o los campos.
+2. Publicar el esquema inglés versionado y preparar adaptadores/consumidores que entiendan ambas
+   formas durante una ventana coordinada. No asumir que renombrar un campo conserva el evento.
+3. Mantener el `id` lógico estable a través de reintentos y traducciones; asegurar que la
+   idempotencia impide procesar dos veces el mismo hecho aunque convivan representaciones.
+4. Migrar todos los productores y consumidores; retirar la forma española solo tras comprobar que
+   ya no se usa y acordar la fecha de retiro.
+5. Si cambia un significado o se elimina/renombra un campo, incrementar `version`; agregar un
+   campo opcional puede ser compatible solo si los consumidores ignoran campos desconocidos.
+
+Los registros históricos de la bandeja de salida y de mensajes procesados no se alteran para
+traducir nombres. Si deben reproducirse, usar un adaptador de lectura que conserve el evento
+original y no provoque duplicados.
+
+## Entrega, reintentos y estado verificado
+
+La arquitectura prevista usa bandeja de salida y Amazon SQS. Los consumidores deben ser
+idempotentes y tolerar entrega al menos una vez. Reintentos, número de intentos, visibilidad,
+respuesta parcial por lote y política de DLQ se documentan como comportamiento implementado solo
+después de verificar la configuración real de SQS/Lambda; el número de intentos no es universal ni
+se puede inferir de este catálogo.
+
+En el repositorio hay productores/consumidores con nombres actuales en español (por ejemplo,
+`pago.aprobado`, `pago.reembolsado` y `cita.aceptada`); por ello, no cambies nombres de evento de
+forma aislada ni declares conformidad completa con un estándar externo. Ver
+[ARQUITECTURA.md](ARQUITECTURA.md) para el patrón de integración.
+
+## Referencias de estudio
+
+«transactional outbox», «at-least-once delivery», «idempotent consumer», «Amazon SQS visibility
+timeout», «dead-letter queue redrive», «AWS Lambda SQS partial batch response».

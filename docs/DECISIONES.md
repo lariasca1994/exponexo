@@ -31,34 +31,37 @@ dentro de seis meses (o en una entrevista) puedes explicar por qué está hecho 
 | 008 | Identidad emite JWT RS256 y publica JWKS | Aceptada | Los demás servicios verifican sin conocer la clave privada. |
 | 009 | Verificación en dos pasos obligatoria y llaves de acceso | Aceptada | Seguridad del ingreso a la altura de una plataforma real. |
 | 010 | Portal React + TypeScript como PWA | Aceptada | Una interfaz para todos los roles, instalable. |
-| 011 | Costo cero y escala a cero | Aceptada | Planes gratuitos; pantalla de espera mientras despiertan los servicios. |
-| 012 | Código e identificadores en inglés; documentación y mensajes al usuario en español | Aceptada | Sigue el estándar internacional en código (Python, Java, C#, TypeScript) manteniendo la experiencia de usuario y documentación en español. |
-| 013 | Identificadores primarios UUID en todas las tablas relacionales | Aceptada | Evita enumeración de recursos en URLs públicas y facilita la generación de IDs antes de persistir o en eventos. |
-| 014 | Cuerpos JSON en `snake_case` en todos los servicios | Aceptada | Consistencia uniforme entre FastAPI, Spring Boot y ASP.NET Core; mapeo directo con esquemas y base de datos. |
+| 011 | Costo cero y escala a cero | Aceptada | Solo planes gratuitos y recursos que escalan a cero; si un recurso no tiene opción gratuita, no se usa. Pantalla de espera mientras despiertan los servicios. |
+| 012 | Identificadores técnicos en inglés; experiencia y documentación en español | Aceptada | Nombres de símbolos, tablas, columnas, rutas y propiedades JSON nuevos o versionados usan inglés. |
+| 013 | UUID v7 generado por la aplicación | Aceptada | Representación nativa por motor; no se reescriben identificadores históricos. |
+| 014 | Cuerpos JSON `snake_case` en todos los servicios | Aceptada | Norma global, incluida Mesa de ayuda; el estado actual no está alineado en todos los servicios. |
 | 015 | Tokens de acceso y refresco en memoria dentro del portal | Aceptada | Evita exposición en `localStorage`/`sessionStorage` ante XSS y simplifica el flujo CORS entre dominios distintos (Vercel, Azure, Cloud Run). |
-| 016 | Token JWT de servicio (RS256) para rutas internas `/v1/interno/...` | Aceptada | Reutiliza la infraestructura JWKS de identidad diferenciando tokens de persona (`sub` usuario) de tokens de servicio (`scope`/`role: internal_service`). |
+| 016 | Token JWT de servicio (RS256) para rutas internas | Aceptada | La ruta legada usa `/v1/interno/...`; el objetivo inglés es `/v1/internal/...`, con migración compatible. |
+| 017 | GHCR como registro objetivo para imágenes de servicios en Azure | Aceptada | Evita mantener un ACR dedicado cuando GHCR cabe en las cuotas aplicables; la autenticación de descarga en Azure sigue siendo un requisito previo. |
+| 018 | Eventos por un tema SNS con una cola SQS por función | Aceptada | Cada evento llega a todas las funciones que lo necesitan; cada una reintenta y aparta sus fallas por separado. |
+| 019 | Configuración en ejecución con los secretos de cada plataforma | Aceptada | Sin servicios de secretos con costo; los workflows la entregan en cada despliegue y los servicios no arrancan si falta. |
 
 ---
 
-## Detalle de decisiones tomadas en Fase 0 (ADR-012 a ADR-016)
+## Detalle de decisiones (ADR-012 a ADR-017)
 
 ### ADR-012: Idioma del código e identificadores
 - **Estado:** Aceptada
 - **Contexto:** El proyecto combina múltiples lenguajes (Python, Java, C#, TypeScript, SQL) cuyas palabras reservadas, librerías estándar y convenciones de la industria están en inglés, mientras que el dominio funcional y los usuarios hablan español.
 - **Opciones:**
-  1. Todo en español (código, tablas y documentación).
-  2. Código e identificadores técnicos en inglés; documentación, comentarios de dominio y mensajes visibles al usuario en español.
-- **Decisión:** Escribir el código fuente, clases, funciones y variables en **inglés**, manteniendo la documentación y los textos de interfaz/errores al usuario en **español** (y respetando los contratos de rutas/tablas del diseño cuando aplique).
-- **Consecuencias:** Se evita el «Spanglish» con palabras reservadas y frameworks (`class User`, `async def verify_mfa`), facilitando la lectura técnica internacional.
+  1. Mantener todos los nombres técnicos en español.
+  2. Usar inglés para los identificadores técnicos y español para la documentación y la experiencia visible a las personas.
+- **Decisión:** Los nombres de código, tablas, columnas, rutas, tipos de evento y propiedades/campos JSON son **en inglés**. Los nombres de dominio visibles, textos de interfaz, errores para personas y documentación narrativa permanecen en español. Los valores de configuración y nombres de variables de entorno ya publicados se conservan literalmente; no se inventan ni se renombran por anticipado.
+- **Consecuencias:** Evita mezclar idiomas en contratos y esquemas nuevos. Esta norma es el objetivo de diseño, no una afirmación de que la implementación actual ya esté alineada. Los identificadores existentes se preservan hasta una migración coordinada y compatible.
 
 ### ADR-013: Identificadores primarios con UUID
 - **Estado:** Aceptada
 - **Contexto:** Las entidades (usuarios, reservas, órdenes de pago, entradas, citas) se referencian en URLs de la API y viajan en mensajes de eventos entre servicios con bases de datos distintas (SQL Server, Oracle y MongoDB).
 - **Opciones:**
-  1. Entero autoincremental (`IDENTITY` / `SEQUENCE`).
-  2. `UUID` (v4/v7) en todas las tablas (`UNIQUEIDENTIFIER` en SQL Server, `RAW(16)` o `VARCHAR2(36)` en Oracle).
-- **Decisión:** Usar **UUID** como llave primaria en todas las tablas relacionales (además del número consecutivo de negocio en `facturas` mediante secuencia en Oracle).
-- **Consecuencias:** Los identificadores no son predecibles ni enumerables desde fuera, y pueden generarse en aplicación o en base de datos sin colisiones entre microservicios.
+  1. Entero autoincremental generado por la base.
+  2. UUID v7 generado en la aplicación antes de persistir o publicar el evento.
+- **Decisión:** Generar **UUID v7 en la aplicación** para nuevos identificadores primarios y referencias UUID. SQL Server los almacena como `uniqueidentifier`; Oracle, como `RAW(16)`; MongoDB, cuando un UUID se almacene como UUID BSON, usa `BinData` subtype 4. Los consecutivos de negocio (por ejemplo, el número legible de factura) siguen siendo distintos de la llave UUID y se asignan según su propia regla.
+- **Consecuencias:** La generación no depende de la base y los UUID v7 son ordenables aproximadamente por tiempo. Los identificadores históricos, incluso si son UUID v4 o cadenas, **no se regeneran ni convierten solo para cambiar de versión**. Toda conversión futura debe preservar el valor lógico, referencias, índices, claves foráneas, consumidores y posibilidad de reversa.
 
 ### ADR-014: Convención `snake_case` para JSON en todas las APIs
 - **Estado:** Aceptada
@@ -66,8 +69,8 @@ dentro de seis meses (o en una entrevista) puedes explicar por qué está hecho 
 - **Opciones:**
   1. `snake_case` en todos los servicios.
   2. `camelCase` en todos los servicios.
-- **Decisión:** Estandarizar todos los contratos JSON de entrada y salida en **`snake_case`**.
-- **Consecuencias:** FastAPI no requiere alias adicionales; en Spring Boot (`spring.jackson.property-naming-strategy=SNAKE_CASE`) y ASP.NET Core (`JsonNamingPolicy.SnakeCaseLower`) se configura globalmente en una sola línea.
+- **Decisión:** Estandarizar todos los cuerpos y propiedades JSON de entrada y salida en **inglés `snake_case`**, globalmente y en todos los servicios, incluida Mesa de ayuda. La regla cubre respuestas de error y cuerpos de eventos; no cambia el nombre de cabeceras HTTP que ya tienen su propia convención.
+- **Consecuencias:** FastAPI requiere que los nombres de campos de sus modelos se migren a inglés; Spring Boot ya declara una estrategia `SNAKE_CASE`, mientras que la configuración actual de ASP.NET Core no registra una política global snake_case. La aceptación de esta ADR no significa que todos los contratos existentes hayan completado esa transición.
 
 ### ADR-015: Almacenamiento de tokens en memoria en el portal
 - **Estado:** Aceptada
@@ -81,9 +84,38 @@ dentro de seis meses (o en una entrevista) puedes explicar por qué está hecho 
 
 ### ADR-016: Autenticación entre servicios con JWT de servicio (RS256)
 - **Estado:** Aceptada
-- **Contexto:** El repartidor de eventos (`servicios/eventos`) y el servicio de pagos necesitan invocar rutas internas (`/v1/interno/...`) que nunca deben ser accesibles con el token de un usuario final.
+- **Contexto:** El repartidor de eventos (`servicios/eventos`) y el servicio de pagos necesitan invocar rutas internas que nunca deben ser accesibles con el token de un usuario final. La ruta que aparece en el código/documentación actual es `/v1/interno/...`; ADR-012 establece `/v1/internal/...` como nombre objetivo en inglés.
 - **Opciones:**
   1. Secreto compartido estático en cabecera.
   2. Token JWT firmado con RS256 por identidad (o emitido mediante credencial de servicio `INTERNO_SECRETO`) con claim de rol/alcance interno, verificado con el mismo JWKS.
-- **Decisión:** Proteger `/v1/interno/...` exigiendo un **JWT RS256 de servicio** (con `role = "service"` / `aud = "exponexo"`), rechazando cualquier token de persona (`visitante`, `expositor`, `personal`, `administrador`).
+- **Decisión:** Proteger las rutas internas objetivo `/v1/internal/...` exigiendo un **JWT RS256 de servicio** (con `role = "service"` / `aud = "exponexo"`), rechazando cualquier token de persona. La ruta legada se conserva como alias durante la migración coordinada y no se retira hasta migrar todos sus clientes.
 - **Consecuencias:** Todos los servicios usan un único mecanismo de verificación criptográfica asimétrica (JWKS RS256) tanto para rutas públicas protegidas como para rutas internas.
+
+### ADR-017: Registro de contenedores para servicios desplegados en Azure
+- **Estado:** Aceptada
+- **Contexto:** Azure Container Registry (ACR) no tiene plan gratuito, lo que rompe el principio de costo cero (ADR-011). GitHub Container Registry (GHCR) aloja las imágenes junto al repositorio dentro del plan gratuito de GitHub.
+- **Opciones:**
+  1. Mantener ACR (descartada: tiene costo).
+  2. Usar GHCR y dar a Azure Container Apps acceso de lectura al paquete.
+- **Decisión:** Identidad y Mesa de ayuda publican sus imágenes en GHCR y Azure Container Apps las descarga desde ahí. Pagos usa Google Artifact Registry porque Cloud Run lo requiere, siempre dentro de su capa gratuita. Ambos registros conservan solo las imágenes recientes mediante limpieza automática.
+- **Consecuencias:** Ningún registro de contenedores genera cargos. A cambio, la Container App necesita una credencial de solo lectura para GHCR (o un paquete público), administrada fuera del código, y las imágenes antiguas deben depurarse para no salir de la capa gratuita.
+
+### ADR-018: Eventos por un tema SNS con una cola SQS por función
+- **Estado:** Aceptada
+- **Contexto:** El repartidor y los avisos necesitan recibir los mismos eventos. Si dos funciones leen una misma cola SQS, se reparten los mensajes en vez de recibirlos ambas.
+- **Opciones:**
+  1. Una cola compartida (descartada: cada evento llega a una sola función).
+  2. Que cada servicio publique en varias colas (acopla a los productores con los consumidores).
+  3. Un tema SNS que reparte a una cola por función.
+- **Decisión:** Los servicios publican su bandeja de salida en el tema `exponexo-eventos`; el tema entrega cada mensaje, tal cual, a la cola de cada función, y cada cola tiene su cola de errores tras 5 intentos.
+- **Consecuencias:** Agregar un consumidor nuevo no toca a los productores. Todo cabe en la capa gratuita permanente de SNS, SQS y Lambda. Como identidad, pagos y mesa de ayuda corren fuera de AWS, publican con un usuario que solo tiene permiso `sns:Publish` sobre ese tema.
+
+### ADR-019: Configuración en ejecución con los secretos de cada plataforma
+- **Estado:** Aceptada
+- **Contexto:** Los servicios necesitan credenciales de bases, correo y firmas en producción, sin guardarlas en el código ni pagar por un servicio de secretos.
+- **Opciones:**
+  1. Servicios dedicados de secretos (Key Vault, Secret Manager): cobran por versión u operación.
+  2. Secretos de la propia plataforma: Container Apps, variables cifradas de la revisión en Cloud Run y de la función en Lambda.
+- **Decisión:** La fuente única es el entorno `produccion` de GitHub; en cada despliegue, un script entrega a cada nube solo lo que su servicio necesita. El wallet de Oracle viaja como zip en base64 y pagos lo descomprime al arrancar.
+- **Consecuencias:** Costo cero y una sola fuente de verdad. Rotar un secreto es cambiarlo en GitHub y volver a desplegar. Cada servicio valida su configuración al arrancar y se niega a funcionar con valores de desarrollo.
+

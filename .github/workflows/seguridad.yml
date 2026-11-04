@@ -17,52 +17,63 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Python Security Audit
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Auditar dependencias Python (pip-audit)
         run: |
           python -m pip install --upgrade pip pip-audit
-          pip-audit -r servicios/identidad-reservas/requirements.txt || true
-          pip-audit -r servicios/eventos/requirements.txt || true
+          pip-audit -r servicios/identidad-reservas/requirements.txt
+          pip-audit -r servicios/eventos/repartidor/requirements.txt
+          pip-audit -r servicios/eventos/avisos/requirements.txt
 
       # Node.js Security Audit
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Auditar dependencias NPM (Portal)
         working-directory: portal
         run: |
-          npm audit --audit-level=high || true
+          test -f package-lock.json || { echo "::error::Falta portal/package-lock.json; npm audit requiere un lockfile reproducible." >&2; exit 1; }
+          npm audit --audit-level=moderate
 
       # .NET Security Audit
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Auditar dependencias .NET
         working-directory: servicios/mesa-ayuda
         run: |
-          dotnet restore MesaAyuda.sln
-          dotnet list MesaAyuda.sln package --vulnerable --include-transitive || true
+          dotnet restore MesaAyuda.sln --force -p:NuGetAudit=true -p:NuGetAuditLevel=low -p:TreatWarningsAsErrors=true
+          dotnet list MesaAyuda.sln package --vulnerable --include-transitive
 
       # Java Security Audit
       - name: Configurar Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
+
+      - name: Caché de la base de vulnerabilidades (evita descargarla completa cada semana)
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: nvd-${{ github.run_id }}
+          restore-keys: nvd-
 
       - name: Auditar dependencias Maven
         working-directory: servicios/pagos
+        env:
+          # Llave gratuita de la NVD (nvd.nist.gov); sin ella la descarga es muy lenta
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          chmod +x ./mvnw
-          ./mvnw dependency:resolve || true
+          ./mvnw -B org.owasp:dependency-check-maven:13.0.0:check -DfailBuildOnCVSS=7             -DnvdApiKeyEnvironmentVariable=NVD_API_KEY

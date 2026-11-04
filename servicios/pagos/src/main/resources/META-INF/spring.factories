@@ -1,0 +1,1 @@
+org.springframework.boot.EnvironmentPostProcessor=co.exponexo.pagos.config.OracleWalletEnvironmentPostProcessor

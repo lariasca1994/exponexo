@@ -6,9 +6,16 @@ ExpoNexo resuelve el día a día de un recinto de ferias y eventos: los exposito
 sus stands, los visitantes compran su entrada y agendan citas de negocios, y el personal del
 recinto atiende incidentes y vigila los kioscos y pantallas durante el evento.
 
-> Estado: **Completado (Fases 0 a 9 implementadas, probadas y verificadas)**. Cumple con la arquitectura distribuida definida en [docs/MANUAL-DESARROLLO.md](docs/MANUAL-DESARROLLO.md).
+> Estado: **repositorio con código, documentación y workflows configurados**. Esta descripción no
+> certifica que todas las fases estén completas, que los workflows hayan pasado recientemente ni
+> que todas las decisiones de contrato ya estén implementadas. La norma objetivo y las diferencias
+> observadas se detallan en [docs/DECISIONES.md](docs/DECISIONES.md) y
+> [docs/MANUAL-DESARROLLO.md](docs/MANUAL-DESARROLLO.md).
 
 ## Capacidades por Rol
+
+La siguiente tabla resume el alcance funcional del producto; no certifica que cada flujo esté
+completo, desplegado o verificado contra servicios externos en el estado actual.
 
 | Para quién | Qué puede hacer |
 |---|---|
@@ -24,10 +31,10 @@ Cuatro servicios autónomos con bases de datos independientes, comunicación as�
 | Carpeta | Servicio | Tecnología | Base de datos | Puerto Local |
 |---|---|---|---|---|
 | [portal/](portal/) | Portal PWA multiplataforma (Android, iOS, Desktop) | React 19 + TypeScript + Vite + PWA Workbox | — | 5173 / 8080 |
-| [servicios/identidad-reservas/](servicios/identidad-reservas/) | Identidad (Argon2, TOTP, WebAuthn, RS256 JWKS), catálogo, reservas, entradas y agenda B2B | Python 3.12+ + FastAPI + SQLAlchemy + Alembic | SQL Server / SQLite (test) | 8001 |
-| [servicios/pagos/](servicios/pagos/) | Órdenes de pago, cobros QR con firma HMAC, facturación y paquete PL/SQL | Java 21 + Spring Boot 3.4 + Flyway | Oracle Autonomous / H2 (test) | 8002 |
-| [servicios/mesa-ayuda/](servicios/mesa-ayuda/) | Mesa de ayuda con cálculo de SLA, telemetría time-series y monitoreo de dispositivos | C# + ASP.NET Core Minimal APIs + Driver MongoDB | MongoDB Atlas (Time-Series & TTL) | 8003 |
-| [servicios/eventos/](servicios/eventos/) | Consumidores SQS: `repartidor` (orquestación interna) y `avisos` (Brevo email y Telegram) | Python Serverless (AWS Lambda) | AWS SQS + DLQ | — |
+| [servicios/identidad-reservas/](servicios/identidad-reservas/) | Identidad (Argon2, TOTP, WebAuthn, RS256 JWKS), catálogo, reservas, entradas y agenda B2B | Python + FastAPI + SQLAlchemy + Alembic | SQL Server / SQLite (test) | 8001 |
+| [servicios/pagos/](servicios/pagos/) | Órdenes de pago, cobros QR con firma HMAC, facturación y paquete PL/SQL | Java 25 + Spring Boot 4.1 + Flyway | Oracle Autonomous / H2 (test) | 8002 |
+| [servicios/mesa-ayuda/](servicios/mesa-ayuda/) | Mesa de ayuda con cálculo de SLA, telemetría time-series y monitoreo de dispositivos | C# + ASP.NET Core Minimal APIs + Driver MongoDB | MongoDB (time-series/TTL cuando se configura) | 8003 |
+| [servicios/eventos/](servicios/eventos/) | Consumidores SQS: `repartidor` (orquestación interna) y `avisos` (Brevo email y Telegram) | Python Serverless (AWS Lambda) | AWS SQS (DLQ según configuración del entorno) | — |
 
 ## PWA y Experiencia de Usuario
 
@@ -64,7 +71,7 @@ Servicios disponibles en:
 2. **Pagos:**
    ```bash
    cd servicios/pagos
-   .\mvnw.cmd spring-boot:run
+   mvn spring-boot:run
    ```
 
 3. **Mesa de Ayuda:**
@@ -76,13 +83,15 @@ Servicios disponibles en:
 4. **Portal:**
    ```bash
    cd portal
-   npm install
+   npm ci
    npm run dev
    ```
 
 ## Pruebas y Calidad
 
-Cada servicio cuenta con su propia batería de pruebas automatizadas:
+El repositorio contiene pruebas y comandos por componente. La tabla describe cómo ejecutarlas; no
+es evidencia de que se hayan ejecutado recientemente ni de que pasen contra los motores de
+producción:
 
 | Componente | Comando de Pruebas | Cobertura / Alcance |
 |---|---|---|
@@ -95,10 +104,40 @@ Cada servicio cuenta con su propia batería de pruebas automatizadas:
 
 ## Integración y Despliegue Continuo (CI/CD)
 
-Configurado en [.github/workflows/](.github/workflows/):
-- **OIDC Multi-Cloud**: Despliegue seguro sin llaves secretas estáticas (Azure Container Apps, Google Cloud Run, AWS Lambda).
-- **Filtro de rutas (`paths`)**: Cada push a `main` compila y despliega exclusivamente el servicio modificado.
-- **Auditoría Continua**: Escaneo programado semanal de dependencias vulnerables en Python, Java, .NET y Node.js.
+La configuración existente está en [.github/workflows/](.github/workflows/). Los archivos
+declaran validaciones y, según el servicio, publicación o despliegue en push a `main`; la presencia
+de un workflow no garantiza una ejecución exitosa.
+
+| Componente | Configuración observada |
+|---|---|
+| Identidad y Mesa de ayuda | En `main`, publican imágenes en GHCR y actualizan Azure Container Apps. Azure necesita permiso para descargar cada imagen; el workflow avisa de esa precondición, pero no la configura ni verifica. |
+| Pagos | En `main`, Actions publica en Google Artifact Registry y despliega en Cloud Run. |
+| Eventos | En `main`, Actions empaqueta y despliega las dos funciones Lambda. No declara comprobación de salud post-despliegue. |
+| Seguridad | Workflow programado y en pull request con auditorías sin `|| true`; el umbral/efecto de cada herramienta depende de su configuración. No equivale por sí solo a una evaluación independiente de cada política. |
+| E2E | Usa SQLite en memoria; no prueba compatibilidad con SQL Server u Oracle reales. |
+| Portal | No hay workflow de GitHub Actions propio visible en el repositorio. |
+
+Los checks de identidad usan SQLite y los demás workflows no acreditan integración con cada base
+real. No se afirma que haya pruebas contractuales automatizadas o bases efímeras en CI. Los
+workflows de servicio filtran rutas por carpeta; los disparadores de seguridad y E2E son más
+amplios. Para detalles y prerrequisitos, ver la sección de CI en el
+[manual de desarrollo](docs/MANUAL-DESARROLLO.md).
+
+El proyecto funciona solo con planes gratuitos y escala a cero. Identidad y Mesa de ayuda publican
+sus imágenes en GHCR; Azure Container Apps las descarga con una credencial de solo lectura
+configurada fuera del código (o desde un paquete público). Pagos usa Google Artifact Registry.
+
+## Convenciones técnicas objetivo
+
+- ADR-012: nombres técnicos, de tablas/columnas, rutas y propiedades JSON en inglés.
+- ADR-013: UUID v7 generado por la aplicación para nuevos IDs; SQL Server `uniqueidentifier`,
+  Oracle `RAW(16)` y MongoDB UUID `BinData` subtype 4. No reescribir IDs históricos.
+- ADR-014: JSON global `snake_case`, incluida Mesa de ayuda.
+
+El código actual aún tiene nombres españoles y genera algunos UUID v4 como cadenas; Pagos ya
+configura Jackson `SNAKE_CASE`, pero la configuración JSON de Mesa de ayuda no aplica esa norma
+global. No cambies consumidores o datos de manera aislada: las rutas, esquemas, eventos y
+almacenamiento requieren migración coordinada y compatibilidad temporal.
 
 ## Documentación Técnica
 

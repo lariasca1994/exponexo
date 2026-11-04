@@ -1,28 +1,86 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
+using MesaAyuda.Api.Seguridad;
 using MesaAyuda.Api.Alertas;
 using MesaAyuda.Api.Bandeja;
 using MesaAyuda.Api.Configuracion;
 using MesaAyuda.Api.Datos;
 using MesaAyuda.Api.Dispositivos;
 using MesaAyuda.Api.Tickets;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var options = MesaAyudaOptions.FromConfiguration(builder.Configuration);
+options.ValidateForEnvironment(builder.Environment.EnvironmentName);
 builder.Services.AddSingleton(options);
 
-if (string.IsNullOrWhiteSpace(options.MongoUri) || options.MongoUri.Contains("TU_USUARIO", StringComparison.OrdinalIgnoreCase))
+var useInMemoryStore = MesaAyudaOptions.IsPlaceholderMongoUri(options.MongoUri);
+if (useInMemoryStore
+    && (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")))
 {
     builder.Services.AddSingleton<IMesaAyudaStore, InMemoryMesaAyudaStore>();
+}
+else if (useInMemoryStore)
+{
+    throw new InvalidOperationException("MONGO_URI debe configurarse; no se permite almacenamiento en memoria fuera de desarrollo/pruebas.");
 }
 else
 {
     builder.Services.AddSingleton<IMesaAyudaStore, MongoMesaAyudaStore>();
 }
 
+builder.Services.AddSingleton<IJwksSigningKeyProvider>(
+    _ => new JwksSigningKeyProvider(options.JwtJwksUrl));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IJwksSigningKeyProvider>((jwt, keyProvider) =>
+    {
+        jwt.MapInboundClaims = false;
+        jwt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = options.JwtEmisor,
+            ValidateAudience = true,
+            ValidAudience = options.JwtAudiencia,
+            ValidateLifetime = true,
+            RequireExpirationTime = true,
+            ValidateIssuerSigningKey = true,
+            ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
+            NameClaimType = "sub",
+            RoleClaimType = "rol",
+            IssuerSigningKeyResolver = (_, _, keyId, _) => keyProvider.GetSigningKeys(keyId)
+        };
+        jwt.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var principal = context.Principal;
+                if (string.IsNullOrWhiteSpace(principal?.FindFirst("sub")?.Value)
+                    || string.IsNullOrWhiteSpace(principal.FindFirst("rol")?.Value)
+                    || !string.Equals(
+                        principal.FindFirst("token_use")?.Value,
+                        "access",
+                        StringComparison.Ordinal))
+                {
+                    context.Fail("JWT debe contener sub, rol y token_use=access.");
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
 builder.Services.AddSingleton<DeviceAndSlaMonitorService>();
+if (!string.IsNullOrWhiteSpace(options.SnsTemaEventosArn))
+{
+    // Región y credenciales: AWS_REGION, AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY
+    builder.Services.AddSingleton<Amazon.SimpleNotificationService.IAmazonSimpleNotificationService,
+        Amazon.SimpleNotificationService.AmazonSimpleNotificationServiceClient>();
+}
+builder.Services.AddHostedService<OutboxPublisherService>();
 
 var corsOrigins = (builder.Configuration["CORS_ORIGENES_PERMITIDOS"] ?? "http://localhost:5173")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -52,6 +110,7 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers["X-Correlation-Id"] = corrId;
     await next();
 });
+app.UseAuthentication();
 
 static IResult ProblemResponse(HttpContext ctx, int status, string title, string detail, string typeSlug)
 {
@@ -74,66 +133,26 @@ static (AuthenticatedPerson? Person, IResult? ErrorResult) RequireUser(
     HttpContext ctx,
     params string[] allowedRoles)
 {
-    var authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
-    if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+    if (ctx.User.Identity?.IsAuthenticated != true)
     {
-        return (null, ProblemResponse(ctx, 401, "No autenticado", "Se requiere un token Bearer válido.", "no-autenticado"));
+        return (null, ProblemResponse(ctx, 401, "No autenticado", "Se requiere autenticacion Bearer.", "no-autenticado"));
     }
 
-    var token = authHeader["Bearer ".Length..].Trim();
-    var parts = token.Split('.');
-    if (parts.Length != 3)
+    var sub = ctx.User.FindFirst("sub")?.Value;
+    var rol = ctx.User.FindFirst("rol")?.Value;
+    var tokenUse = ctx.User.FindFirst("token_use")?.Value;
+    if (string.IsNullOrWhiteSpace(sub) || string.IsNullOrWhiteSpace(rol))
     {
-        return (null, ProblemResponse(ctx, 401, "Token inválido", "El formato del token JWT no es válido.", "token-invalido"));
+        return (null, ProblemResponse(ctx, 401, "Token incompleto", "El token no contiene sujeto o rol.", "token-incompleto"));
     }
 
-    try
+    var person = new AuthenticatedPerson(sub, rol, tokenUse ?? string.Empty);
+    if (allowedRoles.Length > 0 && !allowedRoles.Any(r => string.Equals(r, person.Rol, StringComparison.OrdinalIgnoreCase)))
     {
-        var payloadJson = Encoding.UTF8.GetString(Base64UrlDecode(parts[1]));
-        using var doc = JsonDocument.Parse(payloadJson);
-        var root = doc.RootElement;
-
-        if (root.TryGetProperty("exp", out var expEl) && expEl.TryGetInt64(out var expUnix))
-        {
-            var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (expUnix <= nowUnix)
-            {
-                return (null, ProblemResponse(ctx, 401, "Token vencido", "El token de acceso ha expirado.", "token-vencido"));
-            }
-        }
-
-        var sub = root.TryGetProperty("sub", out var subEl) ? subEl.GetString() : null;
-        var rol = root.TryGetProperty("rol", out var rolEl) ? rolEl.GetString() : "visitante";
-        var tokenUse = root.TryGetProperty("token_use", out var useEl) ? useEl.GetString() : "access";
-
-        if (string.IsNullOrWhiteSpace(sub))
-        {
-            return (null, ProblemResponse(ctx, 401, "Token incompleto", "El token no contiene sujeto ('sub').", "token-sin-sub"));
-        }
-
-        var person = new AuthenticatedPerson(sub!, rol ?? "visitante", tokenUse ?? "access");
-        if (allowedRoles.Length > 0 && !allowedRoles.Any(r => string.Equals(r, person.Rol, StringComparison.OrdinalIgnoreCase)))
-        {
-            return (null, ProblemResponse(ctx, 403, "Acceso denegado", "Tu rol no tiene permiso para realizar esta operación.", "acceso-denegado"));
-        }
-
-        return (person, null);
+        return (null, ProblemResponse(ctx, 403, "Acceso denegado", "Tu rol no tiene permiso para realizar esta operaci?n.", "acceso-denegado"));
     }
-    catch
-    {
-        return (null, ProblemResponse(ctx, 401, "Token inválido", "No se pudo verificar el contenido del token.", "token-invalido"));
-    }
-}
 
-static byte[] Base64UrlDecode(string input)
-{
-    var padded = input.Replace('-', '+').Replace('_', '/');
-    switch (padded.Length % 4)
-    {
-        case 2: padded += "=="; break;
-        case 3: padded += "="; break;
-    }
-    return Convert.FromBase64String(padded);
+    return (person, null);
 }
 
 app.MapGet("/salud", () => Results.Ok(new { estado = "ok", servicio = "mesa-ayuda" }));

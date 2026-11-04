@@ -6,16 +6,19 @@ on:
     paths:
       - 'servicios/mesa-ayuda/**'
       - '.github/workflows/mesa-ayuda.yml'
+      - '.github/scripts/variables_ejecucion.py'
   pull_request:
     branches: [main]
     paths:
       - 'servicios/mesa-ayuda/**'
       - '.github/workflows/mesa-ayuda.yml'
+      - '.github/scripts/variables_ejecucion.py'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
+  id-token: write
+  packages: write
 
 jobs:
   pruebas:
@@ -27,12 +30,12 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restaurar dependencias
         run: dotnet restore MesaAyuda.sln
@@ -40,8 +43,8 @@ jobs:
       - name: Ejecutar pruebas
         run: dotnet test MesaAyuda.sln --no-restore --verbosity normal
 
-  construir-y-desplegar:
-    name: Construir Imagen y Desplegar en Azure Container Apps
+  publicar-imagen:
+    name: Publicar Imagen en GitHub Container Registry
     needs: pruebas
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -49,40 +52,73 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Autenticar en Azure vía OIDC (Sin secretos en texto plano)
-        uses: azure/login@v2
+      - name: Iniciar sesión en GitHub Container Registry
+        uses: docker/login-action@v4
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Iniciar sesión en Azure Container Registry
-        run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Construir y publicar imagen
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./servicios/mesa-ayuda
           file: ./servicios/mesa-ayuda/Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_NAME }}.azurecr.io/exponexo-mesa-ayuda:${{ github.sha }}
-            ${{ secrets.ACR_NAME }}.azurecr.io/exponexo-mesa-ayuda:latest
+            ghcr.io/${{ github.repository_owner }}/exponexo-mesa-ayuda:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/exponexo-mesa-ayuda:latest
 
-      - name: Actualizar Azure Container App
-        uses: azure/container-apps-deploy-action@v2
+      - name: Autenticar en Azure vía OIDC
+        uses: azure/login@v3
         with:
-          acrName: ${{ secrets.ACR_NAME }}
-          containerAppName: exponexo-mesa-ayuda
-          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/exponexo-mesa-ayuda:${{ github.sha }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configurar descarga de GHCR privado si hay credencial
+        env:
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
+          RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        run: |
+          if [ -n "$GHCR_READ_TOKEN" ]; then
+            az containerapp registry set \
+              --name exponexo-mesa-ayuda \
+              --resource-group "$RESOURCE_GROUP" \
+              --server ghcr.io \
+              --username "$GHCR_USERNAME" \
+              --password "$GHCR_READ_TOKEN"
+          else
+            echo "::notice::La imagen GHCR debe ser pública o la Container App debe tener credenciales de registry configuradas."
+          fi
+
+      - name: Desplegar imagen y configuración en Azure Container Apps
+        # Secretos de la Container App (gratis, cifrados) + variables + imagen en una sola revisión
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_BASE: ${{ secrets.MONGO_BASE }}
+          INTERNO_SECRETO: ${{ secrets.INTERNO_SECRETO }}
+          DISPOSITIVO_CODIGO_ENROLAMIENTO: ${{ secrets.DISPOSITIVO_CODIGO_ENROLAMIENTO }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.EVENTOS_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EVENTOS_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          SNS_TEMA_EVENTOS_ARN: ${{ vars.SNS_TEMA_EVENTOS_ARN }}
+          IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
+          PORTAL_URL: ${{ vars.PORTAL_URL }}
+        run: |
+          python3 .github/scripts/variables_ejecucion.py mesa-ayuda exponexo-mesa-ayuda \
+            "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            "ghcr.io/${{ github.repository_owner }}/exponexo-mesa-ayuda:${{ github.sha }}"
 
       - name: Comprobar salud del servicio
         run: |
-          curl --fail --retry 5 --retry-delay 10 https://${{ secrets.APP_DOMAIN_MESA_AYUDA }}/salud
+          fqdn=$(az containerapp show --name exponexo-mesa-ayuda \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query properties.configuration.ingress.fqdn --output tsv)
+          curl --fail --retry 10 --retry-delay 15 --retry-all-errors "https://$fqdn/salud"

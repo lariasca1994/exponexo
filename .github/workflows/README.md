@@ -1,32 +1,43 @@
-# Workflows de GitHub Actions
+# Flujos de GitHub Actions
 
-En la fase 9 crearás aquí un workflow por servicio. Este archivo describe **qué debe hacer** cada
-uno; la configuración la escribes tú siguiendo la documentación de GitHub Actions.
+Los archivos de esta carpeta automatizan pruebas, auditorías y, en `main`, publicación o
+despliegue de los servicios. La existencia de un flujo no implica que sus secretos, permisos,
+recursos de nube o condiciones externas ya estén configurados.
 
-## Workflows a crear
-
-| Archivo | Se dispara con | Pasos |
+| Archivo | Ejecución | Trabajo principal |
 |---|---|---|
-| `identidad-reservas.yml` | push a `main` que cambie `servicios/identidad-reservas/**` | Pruebas (pytest) → construir imagen → publicar → actualizar la Container App → comprobar `GET /salud`. |
-| `pagos.yml` | push a `main` que cambie `servicios/pagos/**` | Pruebas (`mvnw test`) → construir imagen → publicar en Artifact Registry → desplegar en Cloud Run → comprobar `/actuator/health`. |
-| `mesa-ayuda.yml` | push a `main` que cambie `servicios/mesa-ayuda/**` | Pruebas (`dotnet test`) → construir imagen → publicar → actualizar la Container App → comprobar la salud. |
-| `eventos.yml` | push a `main` que cambie `servicios/eventos/**` | Pruebas (pytest) → empaquetar → actualizar el código de las dos funciones → fijar retención de logs. |
-| `portal` | (sin workflow) | Lo publica Vercel con su integración de Git en cada push. |
-| `depuracion.yml` | días 1 y 16 de cada mes y a mano | Borrar imágenes viejas (conservar unas pocas) y cachés sin uso. |
-| `seguridad.yml` | semanal y en cada pull request | Auditoría de dependencias de los cuatro servicios y del portal. |
+| `identidad-reservas.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas con Python 3.14 y SQLite; publica en GHCR y actualiza Azure Container Apps en `main`. |
+| `pagos.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas con Java 25 y el Maven Wrapper; publica en Google Artifact Registry y despliega en Cloud Run con su configuración en `main`. |
+| `mesa-ayuda.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas con .NET 10; publica en GHCR y actualiza Azure Container Apps en `main`. |
+| `eventos.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas Python 3.14; empaqueta y actualiza las dos funciones Lambda con sus variables y fija la retención de logs en 14 días en `main`. |
+| `e2e.yml` | `push`, solicitud de cambio y ejecución manual | Ejecuta el recorrido E2E con SQLite; no prueba SQL Server ni Oracle reales. |
+| `seguridad.yml` | Cada lunes, solicitud de cambio y ejecución manual | Auditoría pip, npm, NuGet y Maven; termina con error si una herramienta configurada falla. |
+| `depuracion.yml` | Días 1 y 16 de cada mes; ejecución manual | Conserva las 5 imágenes más recientes de cada servicio en GHCR y borra cachés y ejecuciones con más de 15 días. |
 
-## Qué estudiar
+## Condiciones para publicar o desplegar
 
-Bloque 9 de la [ruta de aprendizaje](../../docs/RUTA-DE-APRENDIZAJE.md). Busca: «GitHub Actions
-on push paths», «GitHub Actions jobs needs», «GitHub Actions environments secrets», «GitHub
-Actions OIDC permissions id-token write», «actions/setup-python», «actions/setup-java
-distribution temurin», «actions/setup-dotnet», «docker/build-push-action», «azure/login»,
-«google-github-actions/auth», «aws-actions/configure-aws-credentials», «GitHub Actions schedule
-cron», «actions/delete-package-versions».
+- Los trabajos de despliegue se ejecutan solamente en `push` a `main`, después de las pruebas.
+- Azure, Google Cloud y AWS se autentican mediante OIDC; no se guardan llaves permanentes de
+  proveedor en el repositorio.
+- Los recursos y los valores del entorno `produccion` los crean los scripts de
+  [infra/](../../infra/README.md). Los secretos de la aplicación (bases, correo, avisos, firmas)
+  se cargan una vez en ese mismo entorno.
+- [scripts/variables_ejecucion.py](../scripts/variables_ejecucion.py) entrega a cada nube la
+  configuración de su servicio: secretos de la Container App en Azure, variables de la revisión en
+  Cloud Run y variables de la función en Lambda. Si falta un valor, el despliegue se detiene.
+- Azure Container Apps descarga las imágenes privadas de GHCR con la credencial `GHCR_READ_TOKEN`.
+- La auditoría Java usa el secreto `NVD_API_KEY` (llave gratuita de la NVD) y guarda su base en
+  caché entre ejecuciones.
 
-## Reglas
+## Ejecutar y revisar
 
-- Despliegue sin claves guardadas: OIDC hacia cada nube.
-- Un workflow por servicio, que solo corre si cambió su carpeta.
-- Los mensajes de commit de solo documentación llevan `[skip ci]`.
-- Comprueba con `gh run list` y `gh run view --log-failed` cuando algo falle.
+Desde la raíz, consulta ejecuciones con:
+
+```powershell
+gh run list
+gh run view ID_DE_EJECUCION --log-failed
+```
+
+Las pruebas actuales de Identidad y E2E utilizan SQLite; las de Pagos usan H2. No se debe
+interpretar su éxito como validación de procedimientos, tipos nativos o paquetes en SQL Server,
+Oracle o MongoDB.

@@ -1,4 +1,6 @@
+import asyncio
 from datetime import datetime, timezone
+from functools import lru_cache
 import json
 import logging
 from typing import Any
@@ -10,6 +12,8 @@ from app.config import settings
 from app.models.identity import OutboxEvent
 
 logger = logging.getLogger("exponexo.identidad.outbox")
+
+PUBLISH_INTERVAL_SECONDS = 15
 
 
 def build_cloud_event_envelope(outbox_row: OutboxEvent, origin: str = "identidad-reservas") -> dict[str, Any]:
@@ -29,14 +33,21 @@ def build_cloud_event_envelope(outbox_row: OutboxEvent, origin: str = "identidad
     }
 
 
+@lru_cache
+def _sns_client() -> Any:
+    import boto3
+
+    return boto3.client("sns", region_name=settings.aws_region)
+
+
 def publish_pending_outbox_events(
     db: Session,
     max_batch: int = 50,
-    sqs_client: Any = None,
+    sns_client: Any = None,
 ) -> dict[str, int]:
     """
-    Lee los eventos pendientes de `bandeja_salida`, los envía a SQS (o los registra en modo local)
-    y marca `publicado_en`.
+    Lee los eventos pendientes de `bandeja_salida`, los publica en el tema SNS de eventos
+    (o los registra en modo local si no hay tema configurado) y marca `publicado_en`.
     """
     pending = list(
         db.scalars(
@@ -49,22 +60,17 @@ def publish_pending_outbox_events(
 
     published_count = 0
     failed_count = 0
-    queue_url = (settings.sqs_events_queue_url or "").strip()
+    topic_arn = (settings.sns_events_topic_arn or "").strip()
 
     for row in pending:
         try:
-            envelope = build_cloud_event_envelope(row)
-            body = json.dumps(envelope, ensure_ascii=False)
-            if queue_url and sqs_client is not None:
-                sqs_client.send_message(
-                    QueueUrl=queue_url,
-                    MessageBody=body,
+            body = json.dumps(build_cloud_event_envelope(row), ensure_ascii=False)
+            if topic_arn:
+                (sns_client or _sns_client()).publish(
+                    TopicArn=topic_arn,
+                    Message=body,
+                    MessageAttributes={"tipo": {"DataType": "String", "StringValue": row.tipo}},
                 )
-            elif queue_url:
-                import boto3  # type: ignore
-
-                client = boto3.client("sqs", region_name=settings.aws_region or "us-east-1")
-                client.send_message(QueueUrl=queue_url, MessageBody=body)
             else:
                 logger.info("Outbox local simulado [%s]: %s", row.tipo, row.id)
 
@@ -83,3 +89,19 @@ def publish_pending_outbox_events(
         "publicados": published_count,
         "fallidos": failed_count,
     }
+
+
+async def run_outbox_publisher_loop() -> None:
+    """Publica la bandeja cada pocos segundos mientras el contenedor esté despierto."""
+    from app.db import SessionLocal
+
+    def publish_once() -> None:
+        with SessionLocal() as db:
+            publish_pending_outbox_events(db)
+
+    while True:
+        try:
+            await asyncio.to_thread(publish_once)
+        except Exception as exc:
+            logger.error("Ciclo de publicación de la bandeja falló: %s", exc)
+        await asyncio.sleep(PUBLISH_INTERVAL_SECONDS)

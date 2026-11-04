@@ -1,8 +1,8 @@
 # ==============================================================================
-# Dockerfile: mesa-ayuda (ASP.NET Core 9 / 10 Minimal APIs)
+# Dockerfile: mesa-ayuda (ASP.NET Core 10 Minimal APIs)
 # Multi-stage build with .NET Runtime
 # ==============================================================================
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS builder
 
 WORKDIR /src
 
@@ -17,7 +17,7 @@ RUN dotnet publish src/MesaAyuda.Api/MesaAyuda.Api.csproj -c Release -o /app/pub
 # ==============================================================================
 # Runner stage
 # ==============================================================================
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runner
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runner
 
 ENV ASPNETCORE_URLS=http://+:8003 \
     PORT=8003 \

@@ -1,6 +1,6 @@
 package co.exponexo.pagos.bandeja;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import co.exponexo.pagos.config.PagosProperties;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -11,6 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.MessageAttributeValue;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class OutboxPublisherService {
@@ -19,10 +24,14 @@ public class OutboxPublisherService {
 
     private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final String topicArn;
+    private SnsClient snsClient;
 
-    public OutboxPublisherService(OutboxRepository outboxRepository, ObjectMapper objectMapper) {
+    public OutboxPublisherService(
+            OutboxRepository outboxRepository, ObjectMapper objectMapper, PagosProperties properties) {
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
+        this.topicArn = properties.getEvents().getSnsTopicArn();
     }
 
     @Scheduled(fixedDelayString = "${exponexo.pagos.outbox-intervalo-ms:15000}")
@@ -41,7 +50,16 @@ public class OutboxPublisherService {
                 envelope.put("correlacion_id", msg.getCorrelacionId());
                 envelope.put("datos", objectMapper.readValue(msg.getCarga(), Map.class));
 
-                log.info("Evento outbox publicado [{}]: id={}", msg.getTipo(), msg.getId());
+                if (topicArn == null || topicArn.isBlank()) {
+                    log.info("Outbox local simulado [{}]: id={}", msg.getTipo(), msg.getId());
+                } else {
+                    sns().publish(PublishRequest.builder()
+                            .topicArn(topicArn)
+                            .message(objectMapper.writeValueAsString(envelope))
+                            .messageAttributes(Map.of("tipo", MessageAttributeValue.builder()
+                                    .dataType("String").stringValue(msg.getTipo()).build()))
+                            .build());
+                }
                 msg.setPublicadoEn(OffsetDateTime.now(ZoneOffset.UTC));
                 msg.setIntentos(msg.getIntentos() + 1);
                 outboxRepository.save(msg);
@@ -53,5 +71,13 @@ public class OutboxPublisherService {
             }
         }
         return published;
+    }
+
+    // Región y credenciales salen de AWS_REGION, AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY
+    private synchronized SnsClient sns() {
+        if (snsClient == null) {
+            snsClient = SnsClient.builder().httpClient(UrlConnectionHttpClient.create()).build();
+        }
+        return snsClient;
     }
 }

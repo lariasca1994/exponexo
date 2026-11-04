@@ -1,8 +1,10 @@
 from functools import lru_cache
 from pathlib import Path
-from urllib.parse import quote_plus
+from urllib.parse import parse_qs, quote_plus, urlparse
 
-from pydantic import Field
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +19,10 @@ class Settings(BaseSettings):
     )
 
     # 1. General
-    app_environment: str = Field(default="desarrollo", validation_alias="APP_ENTORNO")
+    app_environment: str = Field(
+        default="desarrollo",
+        validation_alias=AliasChoices("APP_ENTORNO", "ENTORNO"),
+    )
     app_port: int = Field(default=8001, validation_alias="APP_PUERTO")
     app_log_level: str = Field(default="INFO", validation_alias="APP_NIVEL_LOGS")
     portal_url: str = Field(default="http://localhost:5173", validation_alias="PORTAL_URL")
@@ -78,9 +83,9 @@ class Settings(BaseSettings):
     cloudinary_api_key: str = Field(default="", validation_alias="CLOUDINARY_API_KEY")
     cloudinary_api_secret: str = Field(default="", validation_alias="CLOUDINARY_API_SECRET")
 
-    # 7. Events Queue (AWS SQS)
+    # 7. Events topic (AWS SNS, fan-out to the SQS queues of the event functions)
     aws_region: str = Field(default="us-east-1", validation_alias="AWS_REGION")
-    sqs_events_queue_url: str = Field(default="", validation_alias="SQS_COLA_EVENTOS_URL")
+    sns_events_topic_arn: str = Field(default="", validation_alias="SNS_TEMA_EVENTOS_ARN")
 
     # 8. Internal Routes
     internal_secret: str = Field(default="", validation_alias="INTERNO_SECRETO")
@@ -91,6 +96,87 @@ class Settings(BaseSettings):
         validation_alias="RESERVA_VENCIMIENTO_MINUTOS",
     )
     ticket_qr_signing_key: str = Field(default="", validation_alias="ENTRADA_QR_CLAVE_FIRMA")
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_environment.strip().casefold() == "produccion"
+
+    @model_validator(mode="after")
+    def validate_production_configuration(self) -> "Settings":
+        if not self.is_production:
+            return self
+
+        def require_secret(value: str, name: str, minimum_length: int = 32) -> None:
+            if len(value.strip()) < minimum_length:
+                raise ValueError(f"{name} debe configurarse con al menos {minimum_length} caracteres")
+
+        def is_placeholder(value: str) -> bool:
+            normalized = value.strip().casefold()
+            return not normalized or any(
+                marker in normalized
+                for marker in ("tu_", "changeme", "change-me", "example", "localhost", "dev-")
+            )
+
+        if self.database_url_override:
+            parsed_database_url = urlparse(self.database_url_override)
+            if parsed_database_url.scheme != "mssql+pyodbc":
+                raise ValueError("DATABASE_URL debe apuntar a SQL Server en produccion")
+            odbc_connect = parse_qs(parsed_database_url.query).get("odbc_connect", [])
+            if odbc_connect:
+                connection = odbc_connect[0].casefold()
+                if any(
+                    marker not in connection
+                    for marker in ("server=", "database=", "uid=", "pwd=")
+                ) or any(marker in connection for marker in ("tu_", "changeme", "example")):
+                    raise ValueError("DATABASE_URL debe contener credenciales reales de SQL Server")
+            elif not all(
+                (parsed_database_url.hostname, parsed_database_url.path.strip("/"),
+                 parsed_database_url.username, parsed_database_url.password)
+            ):
+                raise ValueError("DATABASE_URL debe incluir servidor, base y credenciales de SQL Server")
+        else:
+            database_values = (
+                self.sqlserver_server,
+                self.sqlserver_database,
+                self.sqlserver_user,
+                self.sqlserver_password,
+                self.sqlserver_odbc_driver,
+            )
+            if any(is_placeholder(value) for value in database_values):
+                raise ValueError("La configuracion real de SQL Server es obligatoria en produccion")
+        if self.sqlalchemy_database_uri.startswith("sqlite"):
+            raise ValueError("SQLite no esta permitido en produccion")
+
+        issuer = urlparse(self.jwt_issuer)
+        if issuer.scheme != "https" or not issuer.netloc:
+            raise ValueError("JWT_EMISOR debe ser una URL HTTPS valida en produccion")
+        if not self.jwt_audience.strip() or self.jwt_audience.strip().casefold() == "localhost":
+            raise ValueError("JWT_AUDIENCIA es obligatoria en produccion")
+        if is_placeholder(self.jwt_key_id):
+            raise ValueError("JWT_CLAVE_ID debe configurarse en produccion")
+
+        key_path = self.resolved_private_key_path
+        if not key_path.is_file():
+            raise ValueError("JWT_CLAVE_PRIVADA_RUTA debe apuntar a una clave RSA existente en produccion")
+        try:
+            private_key = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
+        except (OSError, ValueError, TypeError) as exc:
+            raise ValueError("JWT_CLAVE_PRIVADA_RUTA no contiene una clave privada valida") from exc
+        if not isinstance(private_key, rsa.RSAPrivateKey) or private_key.key_size < 2048:
+            raise ValueError("La clave JWT de produccion debe ser RSA de al menos 2048 bits")
+
+        if not self.sns_events_topic_arn.startswith("arn:aws:sns:"):
+            raise ValueError("SNS_TEMA_EVENTOS_ARN debe configurarse en produccion")
+
+        require_secret(self.mfa_encryption_key, "MFA_CLAVE_CIFRADO")
+        require_secret(self.ticket_qr_signing_key, "ENTRADA_QR_CLAVE_FIRMA")
+        require_secret(self.internal_secret, "INTERNO_SECRETO")
+        if any(
+            "dev" in value.casefold()
+            for value in (self.mfa_encryption_key, self.ticket_qr_signing_key, self.internal_secret)
+        ):
+            raise ValueError("Los secretos de desarrollo no estan permitidos en produccion")
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -127,4 +213,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-

@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 import uuid
 
@@ -23,6 +24,7 @@ from app.routers import (
     session,
     tickets_agenda,
 )
+from app.services.outbox_publisher import run_outbox_publisher_loop
 
 
 def create_app(init_local_db: bool = True) -> FastAPI:
@@ -32,7 +34,12 @@ def create_app(init_local_db: bool = True) -> FastAPI:
     async def lifespan(_: FastAPI):
         if init_local_db and settings.sqlalchemy_database_uri.startswith("sqlite"):
             Base.metadata.create_all(bind=engine)
+        publisher = (
+            asyncio.create_task(run_outbox_publisher_loop()) if settings.sns_events_topic_arn else None
+        )
         yield
+        if publisher:
+            publisher.cancel()
 
     app = FastAPI(
         title="ExpoNexo · Identidad, Reservas y Agenda",

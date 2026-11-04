@@ -2,7 +2,7 @@
 # Dockerfile: identidad-reservas (FastAPI + SQLAlchemy + Alembic)
 # Multi-stage minimal, non-root user
 # ==============================================================================
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.14-slim-bookworm AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -13,8 +13,19 @@ WORKDIR /app
 
 # System dependencies for compilation/security
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    build-essential \
     ca-certificates \
+    curl \
+    gnupg \
+    unixodbc-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+      | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" \
+      > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies in a virtual environment
@@ -28,18 +39,29 @@ RUN pip install --upgrade pip && \
 # ==============================================================================
 # Runner stage
 # ==============================================================================
-FROM python:3.12-slim-bookworm AS runner
+FROM python:3.14-slim-bookworm AS runner
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
-    PORT=8001
+    PORT=8001 \
+    APP_ENTORNO=produccion
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    gnupg \
+    unixodbc \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+      | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" \
+      > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && rm -rf /var/lib/apt/lists/*
 
 # Security: Non-root user
@@ -51,8 +73,9 @@ COPY --from=base /opt/venv /opt/venv
 
 # Copy application source code and migrations
 COPY alembic.ini .
-COPY alembic ./alembic
+COPY migraciones ./migraciones
 COPY app ./app
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Set file ownership
 RUN chown -R appuser:appgroup /app
@@ -61,7 +84,8 @@ USER appuser
 
 EXPOSE 8001
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -f http://127.0.0.1:8001/salud || exit 1
 
-ENTRYPOINT ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8001"]
+# Materializa la llave JWT, aplica migraciones y arranca (ver docker-entrypoint.sh)
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

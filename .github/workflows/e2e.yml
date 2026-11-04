@@ -14,18 +14,17 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Instalar dependencias de identidad-reservas y pruebas
         run: |
           python -m pip install --upgrade pip
-          pip install -r servicios/identidad-reservas/requirements.txt
-          pip install pytest pytest-cov
+          pip install -r servicios/identidad-reservas/requirements-dev.txt
 
       - name: Generar claves RSA para la prueba
         run: |
@@ -35,10 +34,11 @@ jobs:
 
       - name: Ejecutar pruebas E2E
         env:
-          ENTORNO: desarrollo
-          BASE_DATOS_URL: sqlite:///:memory:
-          LLAVE_PRIVADA_RSA_PEM: claves/jwt-rs256.key
-          LLAVE_PUBLICA_RSA_PEM: claves/jwt-rs256.pub
-          LLAVE_SECRETA_SIMETRICA: e2e-secreta-simetrica-minimo-32-bytes!
+          APP_ENTORNO: desarrollo
+          APP_PUERTO: '8001'
+          DATABASE_URL: 'sqlite:///:memory:'
+          JWT_CLAVE_PRIVADA_RUTA: claves/jwt-rs256.key
+          MFA_CLAVE_CIFRADO: clave-e2e-solo-para-pruebas-locales!
+          INTERNO_SECRETO: secreto-e2e-solo-para-pruebas-locales!
         run: |
           pytest pruebas/test_e2e_integration.py -v

@@ -6,20 +6,28 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.66.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.2.0"
+    "@tanstack/react-query": "^5.105.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "~5.7.3",
-    "vite": "^6.2.0",
-    "vite-plugin-pwa": "^0.21.1"
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "7.0.2",
+    "vite": "^7.3.7",
+    "vite-plugin-pwa": "^1.1.0",
+    "vitest": "5.1.0"
+  },
+  "overrides": {
+    "@trickfilm400/rollup-plugin-off-main-thread": "4.0.0",
+    "ejs": "7.0.2",
+    "glob": "14.0.3",
+    "minimatch": "11.0.4"
   }
 }

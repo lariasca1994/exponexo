@@ -1,8 +1,8 @@
 # ==============================================================================
-# Dockerfile: pagos (Spring Boot 3.4 + Java 21)
-# Multi-stage build with Temurin 21 JRE
+# Dockerfile: pagos (Spring Boot 4.1 + Java 25)
+# Multi-stage build with Temurin 25 JRE
 # ==============================================================================
-FROM maven:3.9.9-eclipse-temurin-21 AS builder
+FROM maven:3.9.16-eclipse-temurin-25 AS builder
 
 WORKDIR /build
 
@@ -17,7 +17,7 @@ RUN mvn clean package -DskipTests -B
 # ==============================================================================
 # Runner stage
 # ==============================================================================
-FROM eclipse-temurin:21-jre-jammy AS runner
+FROM eclipse-temurin:25-jre-jammy AS runner
 
 ENV PORT=8002 \
     SPRING_PROFILES_ACTIVE=produccion

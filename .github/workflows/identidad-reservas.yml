@@ -6,16 +6,19 @@ on:
     paths:
       - 'servicios/identidad-reservas/**'
       - '.github/workflows/identidad-reservas.yml'
+      - '.github/scripts/variables_ejecucion.py'
   pull_request:
     branches: [main]
     paths:
       - 'servicios/identidad-reservas/**'
       - '.github/workflows/identidad-reservas.yml'
+      - '.github/scripts/variables_ejecucion.py'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
+  id-token: write
+  packages: write
 
 jobs:
   pruebas:
@@ -27,20 +30,19 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
           cache: 'pip'
-          cache-dependency-path: servicios/identidad-reservas/requirements.txt
+          cache-dependency-path: servicios/identidad-reservas/requirements-dev.txt
 
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          pip install -r requirements-dev.txt
 
       - name: Generar claves RSA de prueba para JWT
         run: |
@@ -50,16 +52,17 @@ jobs:
 
       - name: Ejecutar pruebas con cobertura
         env:
-          ENTORNO: desarrollo
-          BASE_DATOS_URL: sqlite:///:memory:
-          LLAVE_PRIVADA_RSA_PEM: claves/jwt-rs256.key
-          LLAVE_PUBLICA_RSA_PEM: claves/jwt-rs256.pub
-          LLAVE_SECRETA_SIMETRICA: clave-super-secreta-ci-minimo-32-bytes!
+          APP_ENTORNO: desarrollo
+          APP_PUERTO: '8001'
+          DATABASE_URL: 'sqlite:///:memory:'
+          JWT_CLAVE_PRIVADA_RUTA: claves/jwt-rs256.key
+          MFA_CLAVE_CIFRADO: clave-ci-solo-para-pruebas-locales!
+          INTERNO_SECRETO: secreto-ci-solo-para-pruebas-locales!
         run: |
           pytest pruebas -v --cov=app --cov-report=xml
 
-  construir-y-desplegar:
-    name: Construir Imagen y Desplegar en Azure Container Apps
+  publicar-imagen:
+    name: Publicar Imagen en GitHub Container Registry
     needs: pruebas
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -67,40 +70,82 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Autenticar en Azure vía OIDC (Sin secretos en texto plano)
-        uses: azure/login@v2
+      - name: Iniciar sesión en GitHub Container Registry
+        uses: docker/login-action@v4
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Iniciar sesión en Azure Container Registry
-        run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Construir y publicar imagen
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./servicios/identidad-reservas
           file: ./servicios/identidad-reservas/Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_NAME }}.azurecr.io/exponexo-identidad-reservas:${{ github.sha }}
-            ${{ secrets.ACR_NAME }}.azurecr.io/exponexo-identidad-reservas:latest
+            ghcr.io/${{ github.repository_owner }}/exponexo-identidad-reservas:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/exponexo-identidad-reservas:latest
 
-      - name: Actualizar Azure Container App
-        uses: azure/container-apps-deploy-action@v2
+      - name: Autenticar en Azure vía OIDC
+        uses: azure/login@v3
         with:
-          acrName: ${{ secrets.ACR_NAME }}
-          containerAppName: exponexo-identidad-reservas
-          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/exponexo-identidad-reservas:${{ github.sha }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configurar descarga de GHCR privado si hay credencial
+        env:
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
+          RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        run: |
+          if [ -n "$GHCR_READ_TOKEN" ]; then
+            az containerapp registry set \
+              --name exponexo-identidad-reservas \
+              --resource-group "$RESOURCE_GROUP" \
+              --server ghcr.io \
+              --username "$GHCR_USERNAME" \
+              --password "$GHCR_READ_TOKEN"
+          else
+            echo "::notice::La imagen GHCR debe ser pública o la Container App debe tener credenciales de registry configuradas."
+          fi
+
+      - name: Desplegar imagen y configuración en Azure Container Apps
+        # Secretos de la Container App (gratis, cifrados) + variables + imagen en una sola revisión
+        env:
+          SQLSERVER_SERVIDOR: ${{ secrets.SQLSERVER_SERVIDOR }}
+          SQLSERVER_BASE: ${{ secrets.SQLSERVER_BASE }}
+          SQLSERVER_USUARIO: ${{ secrets.SQLSERVER_USUARIO }}
+          SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
+          MFA_CLAVE_CIFRADO: ${{ secrets.MFA_CLAVE_CIFRADO }}
+          ENTRADA_QR_CLAVE_FIRMA: ${{ secrets.ENTRADA_QR_CLAVE_FIRMA }}
+          INTERNO_SECRETO: ${{ secrets.INTERNO_SECRETO }}
+          JWT_CLAVE_PRIVADA_PEM: ${{ secrets.JWT_CLAVE_PRIVADA_PEM }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_REMITENTE_CORREO: ${{ secrets.BREVO_REMITENTE_CORREO }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.EVENTOS_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EVENTOS_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          SNS_TEMA_EVENTOS_ARN: ${{ vars.SNS_TEMA_EVENTOS_ARN }}
+          IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
+          PORTAL_URL: ${{ vars.PORTAL_URL }}
+        run: |
+          python3 .github/scripts/variables_ejecucion.py identidad-reservas exponexo-identidad-reservas \
+            "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            "ghcr.io/${{ github.repository_owner }}/exponexo-identidad-reservas:${{ github.sha }}"
 
       - name: Comprobar salud del servicio
         run: |
-          curl --fail --retry 5 --retry-delay 10 https://${{ secrets.APP_DOMAIN_IDENTIDAD }}/salud
+          fqdn=$(az containerapp show --name exponexo-identidad-reservas \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --query properties.configuration.ingress.fqdn --output tsv)
+          curl --fail --retry 10 --retry-delay 15 --retry-all-errors "https://$fqdn/salud"

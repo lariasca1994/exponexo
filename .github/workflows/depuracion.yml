@@ -1,27 +1,54 @@
-name: Mantenimiento y Depuración Periódica
+name: Depuración quincenal
 
+# Cada 15 días (días 1 y 16 de cada mes) borra lo que se acumula con los despliegues, para no
+# salir de las capas gratuitas:
+#   - imágenes viejas en GitHub Container Registry: se conservan las 5 más recientes de cada
+#     servicio (la que está en producción y las anteriores para volver atrás);
+#   - cachés de GitHub Actions y ejecuciones de workflows con más de 15 días.
+# Artifact Registry (pagos) se limpia solo con su política de limpieza; los logs de Lambda vencen
+# a los 14 días. Corre con el token del propio repositorio: no necesita secretos.
 on:
   schedule:
-    - cron: '0 0 1,16 * *' # Días 1 y 16 de cada mes a medianoche UTC
+    - cron: '0 6 1,16 * *'
   workflow_dispatch:
 
 permissions:
-  actions: write
-  packages: write
   contents: read
+  packages: write
+  actions: write
 
 jobs:
-  limpieza-caches:
-    name: Depurar Cachés Antiguas de GitHub Actions
+  depurar:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v4
+      - name: Imágenes viejas de identidad-reservas (se conservan las 5 más recientes)
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: exponexo-identidad-reservas
+          package-type: container
+          min-versions-to-keep: 5
 
-      - name: Limpiar cachés huérfanas
+      - name: Imágenes viejas de mesa-ayuda (se conservan las 5 más recientes)
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: exponexo-mesa-ayuda
+          package-type: container
+          min-versions-to-keep: 5
+
+      - name: Cachés y ejecuciones con más de 15 días
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Consultando cachés almacenadas..."
-          gh cache list --limit 100 || true
+          limite=$(date -u -d '15 days ago' +%s)
+          gh api --paginate "repos/${{ github.repository }}/actions/caches?per_page=100" \
+            --jq '.actions_caches[] | "\(.id) \(.last_accessed_at)"' | while read -r id fecha; do
+            if [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" > /dev/null && echo "caché $id borrada"
+            fi
+          done
+          gh api --paginate "repos/${{ github.repository }}/actions/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.status == "completed") | "\(.id) \(.created_at)"' | while read -r id fecha; do
+            if [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$id" > /dev/null && echo "ejecución $id borrada"
+            fi
+          done

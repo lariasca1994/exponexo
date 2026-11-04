@@ -6,11 +6,13 @@ on:
     paths:
       - 'servicios/pagos/**'
       - '.github/workflows/pagos.yml'
+      - '.github/scripts/variables_ejecucion.py'
   pull_request:
     branches: [main]
     paths:
       - 'servicios/pagos/**'
       - '.github/workflows/pagos.yml'
+      - '.github/scripts/variables_ejecucion.py'
   workflow_dispatch:
 
 permissions:
@@ -27,22 +29,19 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Configurar Java 21 (Temurin)
-        uses: actions/setup-java@v4
+      - name: Configurar Java 25 (Temurin)
+        uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
           cache: 'maven'
-
-      - name: Dar permisos de ejecución a mvnw
-        run: chmod +x ./mvnw
 
       - name: Ejecutar pruebas
         env:
           SPRING_PROFILES_ACTIVE: desarrollo
-        run: ./mvnw test -B
+        run: ./mvnw -B verify
 
   construir-y-desplegar:
     name: Construir Imagen y Desplegar en Google Cloud Run
@@ -53,26 +52,26 @@ jobs:
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Autenticación en Google Cloud vía OIDC (Workload Identity Federation)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Configurar Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Autenticar Docker con Google Artifact Registry
         run: |
           gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
 
       - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Construir y publicar imagen
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./servicios/pagos
           file: ./servicios/pagos/Dockerfile
@@ -81,15 +80,38 @@ jobs:
             ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/exponexo/pagos:${{ github.sha }}
             ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/exponexo/pagos:latest
 
+      - name: Preparar variables de ejecución
+        # Archivo temporal con los valores; Cloud Run los guarda cifrados en la revisión.
+        # Se usa en lugar de Secret Manager para mantener el costo cero.
+        env:
+          ORACLE_TNS_ALIAS: ${{ secrets.ORACLE_TNS_ALIAS }}
+          ORACLE_USUARIO: ${{ secrets.ORACLE_USUARIO }}
+          ORACLE_CONTRASENA: ${{ secrets.ORACLE_CONTRASENA }}
+          ORACLE_WALLET_ZIP_BASE64: ${{ secrets.ORACLE_WALLET_ZIP_BASE64 }}
+          INTERNO_SECRETO: ${{ secrets.INTERNO_SECRETO }}
+          COBRO_QR_CLAVE_FIRMA: ${{ secrets.COBRO_QR_CLAVE_FIRMA }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.EVENTOS_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EVENTOS_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          SNS_TEMA_EVENTOS_ARN: ${{ vars.SNS_TEMA_EVENTOS_ARN }}
+          IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
+          PORTAL_URL: ${{ vars.PORTAL_URL }}
+        run: python3 .github/scripts/variables_ejecucion.py pagos "$RUNNER_TEMP/pagos-env.json"
+
       - name: Desplegar en Google Cloud Run
         run: |
           gcloud run deploy exponexo-pagos \
             --image ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/exponexo/pagos:${{ github.sha }} \
             --region ${{ secrets.GCP_REGION }} \
-            --platform managed \
             --allow-unauthenticated \
-            --port 8002
+            --port 8002 \
+            --cpu 1 --memory 1Gi --cpu-boost \
+            --min-instances 0 --max-instances 1 \
+            --service-account "${{ secrets.GCP_RUNTIME_SERVICE_ACCOUNT }}" \
+            --env-vars-file "$RUNNER_TEMP/pagos-env.json"
+          rm -f "$RUNNER_TEMP/pagos-env.json"
 
       - name: Comprobar salud del servicio
         run: |
-          curl --fail --retry 5 --retry-delay 10 https://${{ secrets.APP_DOMAIN_PAGOS }}/actuator/health
+          url=$(gcloud run services describe exponexo-pagos --region ${{ secrets.GCP_REGION }} --format 'value(status.url)')
+          curl --fail --retry 8 --retry-delay 15 --retry-all-errors "$url/actuator/health"
