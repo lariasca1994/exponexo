@@ -21,15 +21,16 @@ El repositorio contiene un portal React, cuatro servicios y pruebas. Que el cód
 exista no demuestra por sí solo que un despliegue haya ocurrido o que una base administrada esté
 configurada.
 
-Los ADR-012, ADR-013 y ADR-014 son decisiones aceptadas, pero su migración de compatibilidad aún
-no está aplicada en todo el código:
+Convenciones vigentes en todo el código:
 
-- ADR-012 establece identificadores técnicos, tablas, rutas y propiedades JSON en inglés.
-- ADR-013 establece UUID v7 para identificadores nuevos y conservación de los valores históricos.
-- ADR-014 establece JSON en inglés `snake_case` en todas las APIs.
+- ADR-012: clases, funciones y variables en inglés; tablas, columnas, procedimientos, rutas,
+  propiedades JSON, tipos de evento y variables de entorno en español.
+- ADR-013: UUID generado por la aplicación y guardado como texto en las tres bases.
+- ADR-014: JSON en `snake_case` en todas las APIs.
 
 Antes de cambiar un contrato o esquema, coordina proveedor, portal, consumidores de eventos,
-migraciones y procedimientos almacenados. No reescribas migraciones ya aplicadas ni regeneres IDs.
+migraciones y procedimientos almacenados. Una vez en producción, no reescribas migraciones ya
+aplicadas: crea una nueva.
 Consulta [DECISIONES.md](DECISIONES.md), [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md) y
 [CONTRATOS-API.md](CONTRATOS-API.md) para el estado y la estrategia de compatibilidad.
 

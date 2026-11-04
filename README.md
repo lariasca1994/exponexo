@@ -127,17 +127,12 @@ El proyecto funciona solo con planes gratuitos y escala a cero. Identidad y Mesa
 sus imágenes en GHCR; Azure Container Apps las descarga con una credencial de solo lectura
 configurada fuera del código (o desde un paquete público). Pagos usa Google Artifact Registry.
 
-## Convenciones técnicas objetivo
+## Convenciones técnicas
 
-- ADR-012: nombres técnicos, de tablas/columnas, rutas y propiedades JSON en inglés.
-- ADR-013: UUID v7 generado por la aplicación para nuevos IDs; SQL Server `uniqueidentifier`,
-  Oracle `RAW(16)` y MongoDB UUID `BinData` subtype 4. No reescribir IDs históricos.
-- ADR-014: JSON global `snake_case`, incluida Mesa de ayuda.
-
-El código actual aún tiene nombres españoles y genera algunos UUID v4 como cadenas; Pagos ya
-configura Jackson `SNAKE_CASE`, pero la configuración JSON de Mesa de ayuda no aplica esa norma
-global. No cambies consumidores o datos de manera aislada: las rutas, esquemas, eventos y
-almacenamiento requieren migración coordinada y compatibilidad temporal.
+- ADR-012: código (clases, funciones, variables) en inglés; tablas, columnas, rutas, JSON, eventos
+  y variables de entorno en español, como habla el negocio.
+- ADR-013: UUID generado por la aplicación y guardado como texto en las tres bases.
+- ADR-014: JSON en `snake_case` en todos los servicios.
 
 ## Documentación Técnica
 

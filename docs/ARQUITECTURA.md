@@ -59,19 +59,13 @@ flowchart LR
    de espera mientras despiertan. Registros, logs e imágenes viejas se depuran para no salir de
    las capas gratuitas.
 
-## 2.1 Convenciones objetivo y estado observado
+## 2.1 Convenciones
 
-- ADR-012: nombres técnicos de código, tablas, columnas, rutas, tipos de evento y propiedades JSON
-  en inglés; narrativa y textos dirigidos a las personas en español.
-- ADR-013: UUID v7 generado por la aplicación para nuevos IDs; SQL Server `uniqueidentifier`,
-  Oracle `RAW(16)` y MongoDB UUID BSON `BinData` subtype 4. Los registros históricos no se
-  regeneran.
-- ADR-014: cuerpos y propiedades JSON en inglés `snake_case` en todos los servicios, incluida Mesa
-  de ayuda.
-- El código actual aún conserva nombres españoles en rutas/modelos/esquemas y genera UUID v4 en
-  forma de cadena en partes de la implementación. Pagos configura Jackson `SNAKE_CASE`; no se
-  encontró una política global equivalente en Mesa de ayuda. Estos ADR describen el destino, no
-  un estado completamente desplegado. Los cambios requieren migración compatible y coordinada.
+- ADR-012: clases, funciones y variables en inglés; tablas, columnas, procedimientos, rutas,
+  propiedades JSON, tipos de evento y variables de entorno en español.
+- ADR-013: UUID generado por la aplicación y guardado como texto de 36 caracteres en SQL Server,
+  Oracle y MongoDB.
+- ADR-014: cuerpos JSON en `snake_case` en todos los servicios.
 - Identidad y Mesa de ayuda publican imágenes a GHCR desde Actions y actualizan su Azure
   Container App con esa imagen. Pagos usa Google Artifact Registry dentro de su capa gratuita.
   Ver [DECISIONES.md](DECISIONES.md) ADR-017.
@@ -110,9 +104,8 @@ flowchart LR
 
 - Verificación en dos pasos obligatoria (app autenticadora o código por correo) y llaves de acceso.
 - Tokens de acceso cortos y de refresco revocables.
-- Roles legados observados: `visitante`, `expositor`, `personal`, `administrador`; los contratos
-  objetivo usan valores técnicos en inglés según [CONTRATOS-API.md](CONTRATOS-API.md). Migra
-  emisores y validadores coordinadamente.
+- Roles: `visitante`, `expositor`, `personal` y `administrador`; las rutas internas solo aceptan
+  el token de servicio (ver [CONTRATOS-API.md](CONTRATOS-API.md)).
 - Secretos fuera del repositorio; en producción, solo como secretos de GitHub y de cada nube.
 - Despliegue sin claves guardadas (OIDC).
 
