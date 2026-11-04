@@ -46,7 +46,7 @@ jobs:
   publicar-imagen:
     name: Publicar Imagen en GitHub Container Registry
     needs: pruebas
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: produccion
 
