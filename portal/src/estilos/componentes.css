@@ -443,6 +443,7 @@ summary {
 .plano-portada {
   display: block;
   width: 100%;
+  height: auto;
   max-height: 260px;
   margin-bottom: var(--esp-6);
   object-fit: cover;
