@@ -28,7 +28,11 @@ def upgrade() -> None:
                 JOIN sys.index_columns ic ON ic.object_id = kc.parent_object_id AND ic.index_id = kc.unique_index_id
                 JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
                 WHERE kc.parent_object_id = OBJECT_ID('dbo.entradas') AND kc.type = 'UQ' AND c.name = 'codigo_qr');
-            IF @nombre IS NOT NULL EXEC('ALTER TABLE dbo.entradas DROP CONSTRAINT ' + QUOTENAME(@nombre));
+            IF @nombre IS NOT NULL
+            BEGIN
+                DECLARE @sentencia nvarchar(400) = N'ALTER TABLE dbo.entradas DROP CONSTRAINT ' + QUOTENAME(@nombre);
+                EXEC sp_executesql @sentencia;
+            END
             """
         )
         op.create_index("uq_entradas_codigo_qr", "entradas", ["codigo_qr"], unique=True,
