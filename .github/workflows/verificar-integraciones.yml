@@ -1,0 +1,34 @@
+name: Verificar integraciones
+
+# Diagnóstico manual: comprueba que las credenciales de los servicios externos del entorno
+# produccion sean válidas, con una consulta de solo lectura a cada uno. Solo muestra el código HTTP
+# de cada respuesta; nunca imprime valores.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    environment: produccion
+    steps:
+      - name: Consultar Cloudinary, NVD y Brevo
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+        run: |
+          fallas=0
+          revisar() { # nombre, código obtenido
+            if [ "$2" = "200" ]; then echo "✅ $1: credenciales válidas"; else echo "::error::$1 respondió HTTP $2"; fallas=$((fallas + 1)); fi
+          }
+          revisar Cloudinary "$(curl -s -o /dev/null -w '%{http_code}' -u "$CLOUDINARY_API_KEY:$CLOUDINARY_API_SECRET" \
+            "https://api.cloudinary.com/v1_1/$CLOUDINARY_CLOUD_NAME/usage")"
+          revisar NVD "$(curl -s -o /dev/null -w '%{http_code}' -H "apiKey: $NVD_API_KEY" \
+            'https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=1')"
+          revisar Brevo "$(curl -s -o /dev/null -w '%{http_code}' -H "api-key: $BREVO_API_KEY" https://api.brevo.com/v3/account)"
+          exit "$fallas"
