@@ -1,0 +1,255 @@
+/* Portada pública: estructura de reservas (bloque principal, perfiles y eventos destacados) con
+   la paleta tricolor del proyecto. Cortes responsive del portafolio: 1050 / 760 / 360 px. */
+
+.portada {
+  display: flex;
+  flex-direction: column;
+}
+
+.portada [data-base="sqlserver"] { --color-base: var(--db-sqlserver); }
+.portada [data-base="oracle"] { --color-base: var(--db-oracle); }
+.portada [data-base="mongodb"] { --color-base: var(--db-mongodb); }
+
+.portada-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(2.5rem, 6vw, 4.5rem);
+  background:
+    radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--db-mongodb) 16%, transparent), transparent 45%),
+    radial-gradient(circle at 70% 85%, color-mix(in srgb, var(--db-oracle) 14%, transparent), transparent 40%),
+    linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-page) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Motivo del recinto: retícula de stands que se desvanece hacia el texto */
+.portada-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 45%;
+  background-image:
+    linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+
+.portada-contenido {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-inline: 1.5rem;
+}
+
+.portada-antetitulo {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
+.portada-hero h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 4.6vw, 3.25rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.portada-lead {
+  max-width: 600px;
+  margin: 0 0 1.75rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.portada-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn.portada-btn-contorno {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
+}
+
+.btn.portada-btn-contorno:hover {
+  background: var(--text-primary);
+  color: var(--bg-surface);
+  text-decoration: none;
+}
+
+.portada-franja {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+  margin: 2.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.portada-franja li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.portada-franja li::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  background: var(--color-base);
+}
+
+.portada-seccion {
+  padding-top: clamp(2.5rem, 5vw, 3.5rem);
+  padding-bottom: clamp(2.5rem, 5vw, 3.5rem);
+}
+
+.portada-seccion h2 {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.portada-perfiles,
+.portada-lista-eventos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.portada-tarjeta {
+  position: relative;
+  padding: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.portada-tarjeta[data-base] {
+  border-top: 4px solid var(--color-base);
+}
+
+.portada-tarjeta:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.portada-tarjeta h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.portada-tarjeta p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.portada-eventos {
+  background: var(--bg-subtle);
+  border-block: 1px solid var(--border-subtle);
+}
+
+.portada-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.portada-encabezado h2 {
+  margin: 0;
+}
+
+.portada-evento {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.portada-evento p {
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.portada-fecha {
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+}
+
+.portada-enlace {
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+
+.portada-cierre {
+  text-align: center;
+}
+
+.portada-cierre p {
+  max-width: 520px;
+  margin: -0.75rem auto 1.5rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1050px) {
+  .portada-hero::after {
+    inset: 0 0 0 60%;
+  }
+}
+
+@media (max-width: 760px) {
+  .portada-perfiles,
+  .portada-lista-eventos {
+    grid-template-columns: 1fr;
+  }
+
+  .portada-hero::after {
+    display: none;
+  }
+
+  .portada-hero h1 br {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .portada-contenido {
+    padding-inline: 1rem;
+  }
+
+  .portada-acciones .btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portada-tarjeta,
+  .portada-tarjeta:hover {
+    transition: none;
+    transform: none;
+  }
+}

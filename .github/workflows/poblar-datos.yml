@@ -22,7 +22,8 @@ env:
 
 jobs:
   validar:
-    runs-on: ubuntu-latest
+    # MongoDB 8 no arranca con el kernel 6.19+ de las imágenes nuevas (SERVER-121912)
+    runs-on: ubuntu-24.04
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest

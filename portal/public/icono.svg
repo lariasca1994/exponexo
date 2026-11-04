@@ -6,16 +6,16 @@
       <stop offset="100%" stop-color="#020617"/>
     </radialGradient>
     <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#0284c7"/>
+      <stop offset="0%" stop-color="#e5534b"/>
+      <stop offset="100%" stop-color="#cc2927"/>
     </linearGradient>
     <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbbf24"/>
-      <stop offset="100%" stop-color="#d97706"/>
+      <stop offset="0%" stop-color="#e07a68"/>
+      <stop offset="100%" stop-color="#c74634"/>
     </linearGradient>
     <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#059669"/>
+      <stop offset="0%" stop-color="#00ed64"/>
+      <stop offset="100%" stop-color="#00684a"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.4"/>
@@ -36,9 +36,9 @@
           fill-opacity="0.45"/>
 
     <!-- Central Nexus Nodes & Beams (ExpoNexo Networking) -->
-    <path d="M256 96 L256 256" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" stroke-dasharray="8 8"/>
-    <path d="M396 339 L256 256" stroke="#34d399" stroke-width="8" stroke-linecap="round"/>
-    <path d="M116 339 L256 256" stroke="#fbbf24" stroke-width="8" stroke-linecap="round"/>
+    <path d="M256 96 L256 256" stroke="#e5534b" stroke-width="8" stroke-linecap="round" stroke-dasharray="8 8"/>
+    <path d="M396 339 L256 256" stroke="#00ed64" stroke-width="8" stroke-linecap="round"/>
+    <path d="M116 339 L256 256" stroke="#e07a68" stroke-width="8" stroke-linecap="round"/>
 
     <!-- Hex Corner Stand Anchors -->
     <circle cx="256" cy="96" r="18" fill="url(#primaryGrad)"/>

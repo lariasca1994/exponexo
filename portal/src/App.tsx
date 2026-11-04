@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import { identityApi } from "./api/clienteIdentidad";
 import { Ingreso } from "./paginas/acceso/Ingreso";
@@ -24,12 +24,29 @@ import { ProtectedRoute, useSession } from "./sesion/almacenSesion";
 export function App() {
   const { user, refreshToken, clearSession } = useSession();
   const navigate = useNavigate();
-  const [darkTheme, setDarkTheme] = useState(false);
+  // Tema: el elegido antes (si se guardó) o el del sistema
+  const [darkTheme, setDarkTheme] = useState(() => {
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem("exponexo-tema");
+    } catch {
+      // Navegación privada sin almacenamiento: se usa el del sistema
+    }
+    return saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkTheme ? "dark" : "light");
+  }, [darkTheme]);
 
   const toggleTheme = () => {
     const next = !darkTheme;
     setDarkTheme(next);
-    document.documentElement.setAttribute("data-theme", next ? "dark" : "light");
+    try {
+      localStorage.setItem("exponexo-tema", next ? "dark" : "light");
+    } catch {
+      // Sin almacenamiento: el cambio dura mientras la pestaña esté abierta
+    }
   };
 
   const handleLogout = async () => {
@@ -209,6 +226,9 @@ export function App() {
           />
         </Routes>
       </main>
+      <footer className="pie-pagina">
+        ExpoNexo — proyecto de portafolio de Luis Felipe Arias.
+      </footer>
     </div>
   );
 }

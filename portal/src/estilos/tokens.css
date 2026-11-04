@@ -10,11 +10,18 @@
   --border-color: #cbd5e1;
   --border-subtle: #e2e8f0;
 
-  --brand-primary: #0284c7;
-  --brand-primary-hover: #0369a1;
-  --brand-primary-light: #e0f2fe;
-  --brand-accent: #d97706;
-  --brand-accent-hover: #b45309;
+  /* Paleta tricolor: un color por cada base de datos del sistema (regla del portafolio) */
+  --db-sqlserver: #cc2927; /* identidad, reservas y agenda */
+  --db-oracle: #c74634; /* pagos y facturación */
+  --db-mongodb: #00684a; /* mesa de ayuda y monitoreo */
+
+  --brand-primary: var(--db-sqlserver);
+  --brand-primary-hover: #a61f1d;
+  --brand-primary-light: #fdecea;
+  --brand-button: #cc2927;
+  --brand-button-hover: #a61f1d;
+  --brand-accent: var(--db-mongodb);
+  --brand-accent-hover: #004d36;
 
   --status-available: #16a34a;
   --status-reserved: #d97706;
@@ -56,11 +63,17 @@
   --border-color: #27354f;
   --border-subtle: #1e293b;
 
-  --brand-primary: #38bdf8;
-  --brand-primary-hover: #0ea5e9;
-  --brand-primary-light: rgba(56, 189, 248, 0.15);
-  --brand-accent: #f59e0b;
-  --brand-accent-hover: #fbbf24;
+  --db-sqlserver: #ff8a80;
+  --db-oracle: #f4a090;
+  --db-mongodb: #00ed64;
+
+  --brand-primary: var(--db-sqlserver);
+  --brand-primary-hover: #ffb3ab;
+  --brand-primary-light: rgba(255, 138, 128, 0.14);
+  --brand-button: #c7332b;
+  --brand-button-hover: #a61f1d;
+  --brand-accent: var(--db-mongodb);
+  --brand-accent-hover: #5df59c;
 
   --feedback-success-bg: rgba(22, 163, 74, 0.2);
   --feedback-success-text: #86efac;
@@ -192,6 +205,8 @@ a:hover {
 }
 
 .topbar {
+  border-image: linear-gradient(90deg, var(--db-sqlserver) 0 33.3%, var(--db-oracle) 33.3% 66.6%, var(--db-mongodb) 66.6%) 1;
+  border-bottom-width: 3px !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -342,15 +357,15 @@ textarea:focus {
 
 .btn-primary,
 .boton-primario {
-  background: var(--brand-primary);
+  background: var(--brand-button);
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 2px 6px rgba(204, 41, 39, 0.3);
 }
 
 .btn-primary:hover:not(:disabled),
 .boton-primario:hover:not(:disabled) {
-  background: var(--brand-primary-hover);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.5);
+  background: var(--brand-button-hover);
+  box-shadow: 0 4px 12px rgba(204, 41, 39, 0.45);
   transform: translateY(-1px);
 }
 
@@ -505,7 +520,7 @@ textarea:focus {
 
 .login-step {
   margin: 0 0 0.75rem;
-  color: #0369a1;
+  color: var(--brand-primary);
   font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.08em;
@@ -838,4 +853,14 @@ textarea:focus {
 .numero-tabular {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* Pie de página común del portafolio */
+.pie-pagina {
+  padding: 1.25rem 1.5rem calc(1.25rem + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
 }
