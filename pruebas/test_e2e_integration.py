@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+import os
 
 from fastapi.testclient import TestClient
 import pytest
@@ -17,13 +18,19 @@ from app.services.email_sender import get_last_dev_code
 
 @pytest.fixture()
 def e2e_client():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    # Con E2E_DATABASE_URL el recorrido corre contra SQL Server real (esquema creado por las
+    # migraciones, procedimientos almacenados incluidos); sin ella, contra SQLite en memoria.
+    url = os.environ.get("E2E_DATABASE_URL")
+    if url:
+        engine = create_engine(url, pool_pre_ping=True)
+    else:
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    Base.metadata.create_all(bind=engine)
 
     app = create_app(init_local_db=False)
 

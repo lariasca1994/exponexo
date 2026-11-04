@@ -42,3 +42,61 @@ jobs:
           INTERNO_SECRETO: secreto-e2e-solo-para-pruebas-locales!
         run: |
           pytest pruebas/test_e2e_integration.py -v
+
+  e2e-sqlserver:
+    name: Recorrido E2E contra SQL Server real
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: Tmp-${{ github.run_id }}-${{ github.run_attempt }}x
+        ports: ['1433:1433']
+    env:
+      ODBC_LOCAL: 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;UID=sa;PWD=Tmp-${{ github.run_id }}-${{ github.run_attempt }}x;Encrypt=yes;TrustServerCertificate=yes'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Dependencias y driver ODBC 18
+        run: |
+          if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main"               | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+            sudo apt-get update -q && sudo ACCEPT_EULA=Y apt-get install -y -q msodbcsql18 unixodbc-dev
+          fi
+          python -m pip install -q -r servicios/identidad-reservas/requirements-dev.txt
+          mkdir -p claves && openssl genrsa -out claves/jwt-rs256.key 2048
+
+      - name: Base temporal con el esquema real (migraciones)
+        working-directory: servicios/identidad-reservas
+        env:
+          APP_ENTORNO: migracion
+        run: |
+          python - <<'PY'
+          import os, time, pyodbc
+          for _ in range(30):
+              try:
+                  c = pyodbc.connect(os.environ["ODBC_LOCAL"], autocommit=True, timeout=5); break
+              except pyodbc.Error:
+                  time.sleep(5)
+          c.execute("IF DB_ID('exponexodb') IS NULL CREATE DATABASE exponexodb")
+          PY
+          export DATABASE_URL="mssql+pyodbc:///?odbc_connect=$(python -c "import os,urllib.parse;print(urllib.parse.quote_plus(os.environ['ODBC_LOCAL']+';DATABASE=exponexodb'))")"
+          python -m alembic upgrade head
+          echo "E2E_DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+
+      - name: Recorrido completo contra SQL Server
+        env:
+          APP_ENTORNO: desarrollo
+          APP_PUERTO: '8001'
+          JWT_CLAVE_PRIVADA_RUTA: claves/jwt-rs256.key
+          MFA_CLAVE_CIFRADO: clave-e2e-solo-para-pruebas-locales!
+          INTERNO_SECRETO: secreto-e2e-solo-para-pruebas-locales!
+        run: |
+          export DATABASE_URL="$E2E_DATABASE_URL"
+          python -m pytest pruebas/test_e2e_integration.py -v

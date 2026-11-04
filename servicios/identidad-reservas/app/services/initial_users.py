@@ -63,7 +63,7 @@ def ensure_initial_users(db: Session, users: list[dict[str, str]]) -> int:
             changed += int(updated)
 
         has_factor = db.scalar(
-            select(MfaFactor).where(MfaFactor.usuario_id == user.id, MfaFactor.activo.is_(True))
+            select(MfaFactor).where(MfaFactor.usuario_id == user.id, MfaFactor.activo == True)  # noqa: E712
         )
         if has_factor is None:
             db.add(MfaFactor(usuario_id=user.id, tipo="correo", secreto_cifrado=None, activo=True, preferido=True))

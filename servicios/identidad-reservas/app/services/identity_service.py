@@ -101,7 +101,7 @@ def _check_account_lockout(db: Session, email: str, client_ip: str) -> None:
     recent_failures = db.scalar(
         select(func.count(LoginAttempt.id)).where(
             LoginAttempt.correo_huella == email_fp,
-            LoginAttempt.exito.is_(False),
+            LoginAttempt.exito == False,  # noqa: E712
             LoginAttempt.ocurrido_en >= window_start,
         )
     ) or 0
@@ -109,7 +109,7 @@ def _check_account_lockout(db: Session, email: str, client_ip: str) -> None:
     ip_failures = db.scalar(
         select(func.count(LoginAttempt.id)).where(
             LoginAttempt.ip_huella == ip_fp,
-            LoginAttempt.exito.is_(False),
+            LoginAttempt.exito == False,  # noqa: E712
             LoginAttempt.ocurrido_en >= window_start,
         )
     ) or 0
@@ -297,7 +297,7 @@ def login_step_one(
         db.scalars(
             select(MfaFactor).where(
                 MfaFactor.usuario_id == user.id,
-                MfaFactor.activo.is_(True),
+                MfaFactor.activo == True,  # noqa: E712
             )
         )
     )
@@ -382,7 +382,7 @@ def login_step_two(
             select(MfaFactor).where(
                 MfaFactor.usuario_id == user.id,
                 MfaFactor.tipo == "app",
-                MfaFactor.activo.is_(True),
+                MfaFactor.activo == True,  # noqa: E712
             )
         )
         if factor and factor.secreto_cifrado:
