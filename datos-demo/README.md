@@ -12,6 +12,7 @@ Datos ficticios y coherentes entre las tres bases, para mostrar el portal con co
 | `pagos.sql` | Oracle (pagos): las facturas toman su número de la secuencia real |
 | `mesa-ayuda.js` | MongoDB (mesa de ayuda), para mongosh |
 | `cargar_sqlserver.py`, `CargarOracle.java` | Cargan y verifican conteos y coherencia |
+| `imagenes.py` | Genera las portadas de los eventos, los logos de las empresas y los planos de los pabellones, y los sube a Cloudinary (`exponexo/demo/`) |
 
 Reglas: todo es idempotente (correrlo de nuevo no duplica nada), los correos usan el dominio
 `ejemplo.test` (no recibe correo), las personas ficticias no pueden iniciar sesión y no se tocan las
