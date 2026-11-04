@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     # 8. Internal Routes
     internal_secret: str = Field(default="", validation_alias="INTERNO_SECRETO")
 
+    # 9. Cuentas fijas (administración, personal y QA), lista JSON; ver app/services/initial_users.py
+    initial_users_json: str = Field(default="", validation_alias="USUARIOS_INICIALES")
+
     # 9. Business Rules
     reservation_expiration_minutes: int = Field(
         default=30,

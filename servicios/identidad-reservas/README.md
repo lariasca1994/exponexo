@@ -43,3 +43,6 @@ Azure SQL (`alembic upgrade head`, con reintentos mientras la base despierta). A
 contenedor escribe la llave JWT desde `JWT_CLAVE_PRIVADA_PEM` y levanta la API; si la configuración
 es inválida, no arranca.
 La bandeja de salida se publica cada 15 segundos en el tema SNS (`SNS_TEMA_EVENTOS_ARN`).
+Las cuentas fijas de administración, personal y QA llegan en el secreto `USUARIOS_INICIALES` y el
+servicio las crea o ajusta al arrancar. El registro público solo permite elegir visitante (por
+defecto) o expositor.

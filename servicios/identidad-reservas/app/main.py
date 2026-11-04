@@ -24,6 +24,7 @@ from app.routers import (
     session,
     tickets_agenda,
 )
+from app.services.initial_users import ensure_initial_users_in_background
 from app.services.outbox_publisher import run_outbox_publisher_loop
 
 
@@ -37,9 +38,15 @@ def create_app(init_local_db: bool = True) -> FastAPI:
         publisher = (
             asyncio.create_task(run_outbox_publisher_loop()) if settings.sns_events_topic_arn else None
         )
+        seeding = (
+            asyncio.create_task(ensure_initial_users_in_background(settings.initial_users_json))
+            if settings.initial_users_json
+            else None
+        )
         yield
-        if publisher:
-            publisher.cancel()
+        for task in (publisher, seeding):
+            if task:
+                task.cancel()
 
     app = FastAPI(
         title="ExpoNexo · Identidad, Reservas y Agenda",
