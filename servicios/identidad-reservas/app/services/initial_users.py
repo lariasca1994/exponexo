@@ -1,12 +1,12 @@
 """Cuentas fijas de la plataforma (administración, personal y QA).
 
 Llegan en el secreto USUARIOS_INICIALES como una lista JSON de objetos con `correo`, `nombre`,
-`rol` y `contrasena`. Al arrancar, el servicio garantiza que existan, estén activas, con el correo
-verificado, el rol indicado y la verificación en dos pasos por correo activa. Son las únicas
+`rol` y `contrasena`. El workflow de despliegue, después de las migraciones, garantiza que
+existan, estén activas, con el correo verificado, el rol indicado y la verificación en dos pasos
+por correo activa (no lo hace el contenedor al arrancar: así no despierta la base). Son las únicas
 cuentas con rol `personal` o `administrador`: el registro público solo crea visitantes o
 expositores.
 """
-import asyncio
 import json
 import logging
 
@@ -71,24 +71,19 @@ def ensure_initial_users(db: Session, users: list[dict[str, str]]) -> int:
     return changed
 
 
-async def ensure_initial_users_in_background(raw: str, attempts: int = 10, delay_seconds: int = 30) -> None:
-    """Se ejecuta tras el arranque: la base puede estar despertando, así que reintenta."""
+def main() -> None:
+    """Lo ejecuta el workflow de despliegue después de las migraciones (no el contenedor)."""
+    from app.config import get_settings
     from app.db import SessionLocal
 
-    users = parse_initial_users(raw)
+    users = parse_initial_users(get_settings().initial_users_json)
     if not users:
+        print("Sin USUARIOS_INICIALES: no hay cuentas fijas que verificar")
         return
+    with SessionLocal() as db:
+        changed = ensure_initial_users(db, users)
+    print(f"Cuentas fijas verificadas: {len(users)} ({changed} con cambios)")
 
-    def run() -> int:
-        with SessionLocal() as db:
-            return ensure_initial_users(db, users)
 
-    for attempt in range(1, attempts + 1):
-        try:
-            changed = await asyncio.to_thread(run)
-            logger.info("Cuentas fijas verificadas (%d con cambios)", changed)
-            return
-        except Exception as exc:  # la base puede estar despertando
-            logger.warning("Intento %d de cuentas fijas falló: %s", attempt, exc)
-            await asyncio.sleep(delay_seconds)
-    logger.error("No se pudieron verificar las cuentas fijas")
+if __name__ == "__main__":
+    main()

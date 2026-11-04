@@ -121,7 +121,7 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Aplicar migraciones en Azure SQL
+      - name: Aplicar migraciones y cuentas fijas en Azure SQL
         # Se aplican aquí y no al arrancar el contenedor: así arranca rápido y Azure no lo reinicia
         # mientras migra. La base escala a cero: el primer intento la despierta y puede fallar
         # con tiempo agotado, por eso se reintenta.
@@ -133,6 +133,7 @@ jobs:
           SQLSERVER_USUARIO: ${{ secrets.SQLSERVER_USUARIO }}
           SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
           SQLSERVER_DRIVER_ODBC: ODBC Driver 18 for SQL Server
+          USUARIOS_INICIALES: ${{ secrets.USUARIOS_INICIALES }}
         run: |
           if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
             curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
@@ -142,7 +143,9 @@ jobs:
           fi
           python -m pip install -q -r requirements.txt
           for intento in 1 2 3 4 5; do
-            python -m alembic upgrade head && exit 0
+            # Migraciones y cuentas fijas aquí (no al arrancar el contenedor): la base solo
+            # despierta en el despliegue y cuando alguien usa el servicio
+            python -m alembic upgrade head && python -m app.services.initial_users && exit 0
             echo "::warning::Intento $intento de migración falló (la base puede estar despertando); reintento en 30 s"
             sleep 30
           done
@@ -164,7 +167,6 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-          USUARIOS_INICIALES: ${{ secrets.USUARIOS_INICIALES }}
           AWS_ACCESS_KEY_ID: ${{ secrets.EVENTOS_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EVENTOS_AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ vars.AWS_REGION }}

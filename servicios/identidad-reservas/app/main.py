@@ -24,8 +24,7 @@ from app.routers import (
     session,
     tickets_agenda,
 )
-from app.services.initial_users import ensure_initial_users_in_background
-from app.services.outbox_publisher import run_outbox_publisher_loop
+from app.services.outbox_publisher import publish_after_write
 
 
 def create_app(init_local_db: bool = True) -> FastAPI:
@@ -35,18 +34,8 @@ def create_app(init_local_db: bool = True) -> FastAPI:
     async def lifespan(_: FastAPI):
         if init_local_db and settings.sqlalchemy_database_uri.startswith("sqlite"):
             Base.metadata.create_all(bind=engine)
-        publisher = (
-            asyncio.create_task(run_outbox_publisher_loop()) if settings.sns_events_topic_arn else None
-        )
-        seeding = (
-            asyncio.create_task(ensure_initial_users_in_background(settings.initial_users_json))
-            if settings.initial_users_json
-            else None
-        )
+        # Sin tareas periódicas: nada debe tocar la base si nadie usa el servicio
         yield
-        for task in (publisher, seeding):
-            if task:
-                task.cancel()
 
     app = FastAPI(
         title="ExpoNexo · Identidad, Reservas y Agenda",
@@ -70,6 +59,13 @@ def create_app(init_local_db: bool = True) -> FastAPI:
         request.state.correlation_id = correlation_id
         response: Response = await call_next(request)
         response.headers["X-Correlation-Id"] = correlation_id
+        # Una escritura exitosa pudo dejar eventos en la bandeja: se publican ya, con la base despierta
+        if (
+            settings.sns_events_topic_arn
+            and request.method in ("POST", "PUT", "PATCH", "DELETE")
+            and response.status_code < 400
+        ):
+            asyncio.create_task(publish_after_write())
         return response
 
     app.add_exception_handler(ProblemDetailError, problem_detail_exception_handler)

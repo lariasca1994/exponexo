@@ -29,7 +29,7 @@ SERVICIOS = {
          "JWT_CLAVE_PRIVADA_PEM", "BREVO_API_KEY", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
         ["SQLSERVER_SERVIDOR", "SQLSERVER_BASE", "SQLSERVER_USUARIO", "BREVO_REMITENTE_CORREO",
          "AWS_REGION", "SNS_TEMA_EVENTOS_ARN", "IDENTIDAD_URL", "PORTAL_URL"],
-        ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "USUARIOS_INICIALES"],
+        ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"],
     ),
     "mesa-ayuda": (
         ["MONGO_URI", "INTERNO_SECRETO", "DISPOSITIVO_CODIGO_ENROLAMIENTO", "AWS_ACCESS_KEY_ID",
@@ -44,7 +44,9 @@ SERVICIOS = {
         [],
     ),
 }
-SECRETOS_OPCIONALES = {"CLOUDINARY_API_SECRET", "CLOUDINARY_API_KEY", "USUARIOS_INICIALES"}
+SECRETOS_OPCIONALES = {"CLOUDINARY_API_SECRET", "CLOUDINARY_API_KEY"}
+# Variables que versiones anteriores entregaban al contenedor y ya no debe tener
+OBSOLETAS = ["USUARIOS_INICIALES"]
 
 
 def leer(servicio: str) -> tuple[dict[str, str], set[str]]:
@@ -102,7 +104,14 @@ def main() -> None:
                      for n, v in sorted(valores.items())]
         # Una sola revisión nueva con la imagen y la configuración juntas
         az("containerapp", "update", "--name", app, "--resource-group", grupo, "--image", imagen,
-           "--min-replicas", "0", "--max-replicas", "1", "--set-env-vars", *variables)
+           "--min-replicas", "0", "--max-replicas", "1", "--set-env-vars", *variables,
+           "--remove-env-vars", *OBSOLETAS)
+        # Secretos que el contenedor ya no usa (p. ej. las cuentas fijas, ahora en el workflow)
+        existentes = subprocess.run(["az", "containerapp", "secret", "list", "--name", app, "--resource-group", grupo,
+                                     "--query", "[].name", "--output", "tsv"], capture_output=True, text=True).stdout.split()
+        sobrantes = [s for s in existentes if s in {o.lower().replace("_", "-") for o in OBSOLETAS}]
+        if sobrantes:
+            az("containerapp", "secret", "remove", "--name", app, "--resource-group", grupo, "--secret-names", *sobrantes)
     elif servicio == "eventos":
         funcion = sys.argv[2]
         # Una actualización de código o configuración en curso bloquea la siguiente

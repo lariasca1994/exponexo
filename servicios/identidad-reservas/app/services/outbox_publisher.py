@@ -13,8 +13,6 @@ from app.models.identity import OutboxEvent
 
 logger = logging.getLogger("exponexo.identidad.outbox")
 
-PUBLISH_INTERVAL_SECONDS = 15
-
 
 def build_cloud_event_envelope(outbox_row: OutboxEvent, origin: str = "identidad-reservas") -> dict[str, Any]:
     created_iso = (
@@ -91,17 +89,26 @@ def publish_pending_outbox_events(
     }
 
 
-async def run_outbox_publisher_loop() -> None:
-    """Publica la bandeja cada pocos segundos mientras el contenedor esté despierto."""
+_publishing = asyncio.Lock()
+
+
+async def publish_after_write() -> None:
+    """Publica la bandeja justo después de una operación que escribe.
+
+    No hay sondeo periódico: consultar la base cada pocos segundos la mantendría despierta y
+    consumiría su cuota gratuita (Azure SQL se pausa sola sin uso). Tras una escritura la base ya
+    está despierta; un evento que falle se reintenta con la siguiente escritura.
+    """
+    if _publishing.locked():
+        return
     from app.db import SessionLocal
 
     def publish_once() -> None:
         with SessionLocal() as db:
             publish_pending_outbox_events(db)
 
-    while True:
+    async with _publishing:
         try:
             await asyncio.to_thread(publish_once)
         except Exception as exc:
-            logger.error("Ciclo de publicación de la bandeja falló: %s", exc)
-        await asyncio.sleep(PUBLISH_INTERVAL_SECONDS)
+            logger.error("Publicación de la bandeja falló: %s", exc)

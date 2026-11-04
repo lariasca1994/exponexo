@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import uuid
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -26,6 +26,14 @@ class Ticket(Base):
             "estado IN ('pendiente_pago', 'activa', 'usada', 'cancelada')",
             name="ck_entradas_estado",
         ),
+        # Único solo cuando existe: las entradas pendientes de pago aún no tienen QR
+        Index(
+            "uq_entradas_codigo_qr",
+            "codigo_qr",
+            unique=True,
+            mssql_where=text("codigo_qr IS NOT NULL"),
+            sqlite_where=text("codigo_qr IS NOT NULL"),
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -44,7 +52,7 @@ class Ticket(Base):
     tipo: Mapped[str] = mapped_column(String(20), nullable=False, default="general")
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="pendiente_pago")
     orden_pago_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    codigo_qr: Mapped[str | None] = mapped_column(String(512), unique=True, nullable=True)
+    codigo_qr: Mapped[str | None] = mapped_column(String(512), nullable=True)
     usada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     usada_en_dispositivo: Mapped[str | None] = mapped_column(String(64), nullable=True)
     creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
