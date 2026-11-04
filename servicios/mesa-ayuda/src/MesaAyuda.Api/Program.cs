@@ -10,6 +10,8 @@ using MesaAyuda.Api.Tickets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
+MongoConventions.Register();
+
 var builder = WebApplication.CreateBuilder(args);
 
 var options = MesaAyudaOptions.FromConfiguration(builder.Configuration);

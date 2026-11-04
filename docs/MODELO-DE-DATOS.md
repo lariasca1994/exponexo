@@ -48,6 +48,10 @@ en `servicios/pagos/src/main/resources/db/migration/`.
 
 ## 3. Mesa de ayuda y monitoreo · MongoDB Atlas
 
+Campos en `snake_case` (los mismos nombres del JSON de la API) y fechas como fechas BSON en UTC;
+`_id` es el UUID en texto. `lecturas_dispositivo` es una colección de series de tiempo
+(`momento` como campo de tiempo y `dispositivo_id` como metadato).
+
 | Colección | Contenido |
 |---|---|
 | `tickets` | Ticket con su historial embebido, prioridad y SLA; número único |
