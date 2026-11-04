@@ -29,9 +29,10 @@ az containerapp env show --name "$ENTORNO" --resource-group "$GRUPO" >/dev/null 
   az containerapp env create --name "$ENTORNO" --resource-group "$GRUPO" --location "$UBICACION" \
     --logs-destination none --only-show-errors --output none
 
-read -r -s -p "Token de GitHub con read:packages (no se muestra): " TOKEN_GHCR; echo
-[ -n "$TOKEN_GHCR" ] || { echo "Se necesita el token para descargar de GHCR"; exit 1; }
-gh secret set GHCR_READ_TOKEN --env produccion --repo "$REPO" --body "$TOKEN_GHCR"
+read -r -s -p "Token de GitHub con read:packages (Enter para conservar el ya configurado): " TOKEN_GHCR; echo
+if [ -n "$TOKEN_GHCR" ]; then
+  gh secret set GHCR_READ_TOKEN --env produccion --repo "$REPO" --body "$TOKEN_GHCR"
+fi
 
 declare -A PUERTOS=([identidad-reservas]=8001 [mesa-ayuda]=8003)
 declare -A VARIABLES=([identidad-reservas]=IDENTIDAD_URL [mesa-ayuda]=MESA_AYUDA_URL)
@@ -44,8 +45,10 @@ for servicio in identidad-reservas mesa-ayuda; do
       --target-port "${PUERTOS[$servicio]}" --min-replicas 0 --max-replicas 1 \
       --cpu 0.5 --memory 1.0Gi --only-show-errors --output none
   fi
-  az containerapp registry set --name "$APP" --resource-group "$GRUPO" --server ghcr.io \
-    --username "$DUENO" --password "$TOKEN_GHCR" --only-show-errors --output none
+  if [ -n "$TOKEN_GHCR" ]; then
+    az containerapp registry set --name "$APP" --resource-group "$GRUPO" --server ghcr.io \
+      --username "$DUENO" --password "$TOKEN_GHCR" --only-show-errors --output none
+  fi
   FQDN=$(az containerapp show --name "$APP" --resource-group "$GRUPO" \
     --query properties.configuration.ingress.fqdn --output tsv)
   gh variable set "${VARIABLES[$servicio]}" --env produccion --repo "$REPO" --body "https://$FQDN"
