@@ -10,9 +10,12 @@ recursos de nube o condiciones externas ya estén configurados.
 | `pagos.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas con Java 25 y el Maven Wrapper; publica en Google Artifact Registry y despliega en Cloud Run con su configuración en `main`. |
 | `mesa-ayuda.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas con .NET 10; publica en GHCR y actualiza Azure Container Apps en `main`. |
 | `eventos.yml` | `push`/solicitud de cambio que afecta el servicio; ejecución manual | Pruebas Python 3.14; empaqueta y actualiza las dos funciones Lambda con sus variables y fija la retención de logs en 14 días en `main`. |
-| `e2e.yml` | `push`, solicitud de cambio y ejecución manual | Ejecuta el recorrido E2E con SQLite; no prueba SQL Server ni Oracle reales. |
+| `e2e.yml` | `push`, solicitud de cambio y ejecución manual | Ejecuta el recorrido E2E con SQLite y, en un segundo trabajo, contra un SQL Server real en contenedor (migraciones y procedimientos). |
 | `seguridad.yml` | Cada lunes, solicitud de cambio y ejecución manual | Auditoría pip, npm, NuGet y Maven; termina con error si una herramienta configurada falla. |
-| `depuracion.yml` | Días 1 y 16 de cada mes; ejecución manual | Conserva las 5 imágenes más recientes de cada servicio en GHCR y borra cachés y ejecuciones con más de 15 días. |
+| `depuracion.yml` | Días 1 y 16 de cada mes; ejecución manual | Limpieza quincenal para no acumular espacio que pueda generar costo: en GitHub conserva las 5 imágenes más recientes de cada servicio en GHCR y borra cachés, artefactos y ejecuciones con más de 15 días; en las tres bases borra lo vencido con más de 15 días (intentos de ingreso, auditoría, códigos, sesiones y bandejas publicadas en Azure SQL; bandeja, eventos procesados y cobros QR vencidos en Oracle; bandeja publicada en MongoDB, cuyas lecturas de dispositivos vencen solas a los 15 días). |
+| `capturas-manual.yml` | `push` que cambia `portal/`; ejecución manual | Espera la publicación del portal en Vercel, regenera las capturas del [manual](../../docs/MANUAL.md) con Playwright y sube un commit solo si alguna cambió. |
+| `poblar-datos.yml` | Ejecución manual | Genera los datos de demostración y, si se pide, los carga en producción. |
+| `verificar-integraciones.yml` | Ejecución manual | Comprueba la conexión con los servicios externos sin escribir datos. |
 
 ## Condiciones para publicar o desplegar
 
@@ -38,6 +41,6 @@ gh run list
 gh run view ID_DE_EJECUCION --log-failed
 ```
 
-Las pruebas actuales de Identidad y E2E utilizan SQLite; las de Pagos usan H2. No se debe
+Las pruebas unitarias de Identidad utilizan SQLite y las de Pagos usan H2; el E2E también corre contra SQL Server. No se debe
 interpretar su éxito como validación de procedimientos, tipos nativos o paquetes en SQL Server,
 Oracle o MongoDB.

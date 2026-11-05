@@ -57,3 +57,6 @@ playwright-report/
 
 # Imágenes generadas por datos-demo/imagenes.py (se suben a Cloudinary, no se versionan)
 datos-demo/imagenes/
+
+# Archivo de trabajo local (consultas de referencia)
+docs/consultas.docx

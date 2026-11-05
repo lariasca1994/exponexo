@@ -17,6 +17,18 @@ migrar coordinadamente. ADR-012 y ADR-014 describen el destino técnico en ingl�
 Las variables `VITE_` se incluyen en el JavaScript público y solo deben contener direcciones o
 configuración no sensible.
 
+## Pantalla de mantenimiento
+
+Si un servicio responde 502, 503 o 504, o no responde, `src/api/mantenimiento.ts` lo informa y el
+portal muestra la pantalla **Estamos preparando el recinto** en lugar de un error. Cada 30 segundos
+consulta `/salud` del servicio caído y vuelve sola a la pantalla normal cuando responde; no
+reintenta acciones del usuario, para no duplicarlas.
+
+## Capturas del manual
+
+Cada cambio en esta carpeta dispara el workflow `capturas-manual.yml`, que regenera las imágenes de
+[docs/img/manual/](../docs/img/manual/) contra producción y las sube si cambiaron.
+
 ## Desarrollo y comprobaciones
 
 Desde esta carpeta:

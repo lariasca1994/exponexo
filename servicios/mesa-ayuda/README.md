@@ -38,3 +38,9 @@ actualiza Azure Container Apps mediante OIDC, con su configuración como secreto
 App. La bandeja de salida se publica cada 15 segundos en el tema SNS (`SNS_TEMA_EVENTOS_ARN`). Si
 el JWKS de identidad no responde (por ejemplo, mientras despierta), se reintenta a los 10 segundos
 conservando las llaves anteriores.
+
+## Retención de 15 días
+
+Las lecturas de dispositivos vencen solas a los 15 días por un índice TTL
+(`LECTURA_RETENCION_DIAS=15`). Los eventos ya publicados de la bandeja de salida los borra el
+workflow `depuracion.yml` cada 15 días, para que la base no crezca hasta salirse del plan gratuito.

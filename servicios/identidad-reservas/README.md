@@ -47,3 +47,11 @@ operación que escribe, sin sondeos periódicos: así Azure SQL se pausa cuando 
 no se consume su cuota gratuita. Las cuentas fijas de administración, personal y QA llegan en el
 secreto `USUARIOS_INICIALES` y el workflow las crea o ajusta después de las migraciones. El registro público solo permite elegir visitante (por
 defecto) o expositor.
+
+## Depuración cada 15 días
+
+`app/services/depuracion.py` borra los registros operativos con más de 15 días: intentos de
+ingreso, auditoría, códigos de verificación usados o vencidos, sesiones vencidas o revocadas,
+eventos ya publicados de la bandeja de salida y eventos procesados. Lo ejecuta el workflow
+`depuracion.yml` los días 1 y 16 de cada mes (`python -m app.services.depuracion`), para que la
+base no crezca hasta salirse de la cuota gratuita.

@@ -1,0 +1,58 @@
+name: Capturas del manual
+
+# Regenera automáticamente las imágenes de docs/img/manual/ contra el portal en producción cada vez
+# que cambia el portal (después de que Vercel publica la versión nueva) y a mano. Solo sube un
+# commit si alguna imagen cambió; no consulta las bases más allá del catálogo público.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'portal/**'
+      - 'docs/img/manual/generar.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capturas-manual
+  cancel-in-progress: true
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Esperar la publicación del portal en Vercel
+        if: github.event_name == 'push'
+        run: |
+          # Vercel compila en paralelo: se espera a que la portada sirva un archivo nuevo
+          antes=$(curl -s https://exponexo-portal.vercel.app/ | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
+          for i in $(seq 1 30); do
+            sleep 10
+            ahora=$(curl -s https://exponexo-portal.vercel.app/ | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
+            [ "$ahora" != "$antes" ] && echo "Portal publicado ($ahora)" && break
+          done
+
+      - name: Generar capturas
+        run: |
+          npm install --no-save --silent playwright@1.64.1
+          npx playwright install --with-deps chromium > /dev/null
+          node docs/img/manual/generar.cjs
+
+      - name: Subir las capturas si cambiaron
+        run: |
+          git add docs/img/manual/*.png
+          if git diff --cached --quiet; then
+            echo "Las capturas no cambiaron."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(manual): capturas actualizadas automáticamente [skip ci]"
+            git pull --rebase -q && git push -q
+          fi

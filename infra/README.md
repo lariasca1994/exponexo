@@ -37,7 +37,9 @@ tras 5 intentos fallidos el mensaje pasa a la cola de errores de esa función.
 
 Cada recurso se crea solo en su plan gratuito; si no tiene opción gratuita, no se usa. Las imágenes
 viejas se depuran (GHCR conserva 5 por servicio y Artifact Registry 2), los logs de Lambda vencen a
-los 14 días y el entorno de Container Apps no envía logs a Log Analytics. No guardes wallets,
+los 14 días y el entorno de Container Apps no envía logs a Log Analytics. Cada 15 días (días 1 y 16) el workflow
+`depuracion.yml` borra de las tres bases los registros operativos vencidos y de GitHub las cachés,
+artefactos y ejecuciones viejas, para que nada crezca hasta salirse de la cuota gratuita. No guardes wallets,
 archivos `.env`, claves ni credenciales en esta carpeta.
 
 Para el orden completo del primer despliegue, consulta el
