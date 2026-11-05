@@ -450,3 +450,66 @@ summary {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
+
+/* ---- Pantalla de mantenimiento ------------------------------------------- */
+.mantenimiento {
+  display: grid;
+  min-height: calc(100dvh - 160px);
+  place-items: center;
+  padding: var(--esp-8) var(--esp-4);
+}
+
+.mantenimiento__tarjeta {
+  width: min(540px, 100%);
+  padding: var(--esp-10) var(--esp-8);
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.mantenimiento__tarjeta::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--franja-marca);
+}
+
+.mantenimiento__icono {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: var(--esp-5);
+}
+
+.mantenimiento__icono span {
+  width: 14px;
+  height: 34px;
+  border-radius: 6px;
+  animation: pulseGlow 1.4s ease-in-out infinite;
+}
+
+.mantenimiento__icono span:nth-child(1) { background: var(--db-sqlserver); }
+.mantenimiento__icono span:nth-child(2) { background: var(--db-oracle); animation-delay: 0.2s; }
+.mantenimiento__icono span:nth-child(3) { background: var(--db-mongodb); animation-delay: 0.4s; }
+
+.mantenimiento__antetitulo {
+  margin: 0 0 var(--esp-2);
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
+.mantenimiento p {
+  color: var(--text-secondary);
+}
+
+.mantenimiento__cuenta {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

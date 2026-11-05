@@ -20,6 +20,8 @@ import { MisReservas } from "./paginas/reservas/MisReservas";
 import { MesaAyudaTickets } from "./paginas/soporte/MesaAyudaTickets";
 import { MonitoreoDispositivos } from "./paginas/soporte/MonitoreoDispositivos";
 import { ProtectedRoute, useSession } from "./sesion/almacenSesion";
+import { suscribirMantenimiento } from "./api/mantenimiento";
+import { Mantenimiento } from "./paginas/Mantenimiento";
 
 export function App() {
   const { user, refreshToken, clearSession } = useSession();
@@ -38,6 +40,9 @@ export function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkTheme ? "dark" : "light");
   }, [darkTheme]);
+
+  const [servicioCaido, setServicioCaido] = useState<string | null>(null);
+  useEffect(() => suscribirMantenimiento(setServicioCaido), []);
 
   const toggleTheme = () => {
     const next = !darkTheme;
@@ -121,6 +126,7 @@ export function App() {
       </header>
 
       <main>
+        {servicioCaido ? <Mantenimiento /> : (
         <Routes>
           <Route path="/" element={<Portada />} />
           <Route path="/registro" element={<Registro />} />
@@ -225,6 +231,7 @@ export function App() {
             }
           />
         </Routes>
+        )}
       </main>
       <footer className="pie-pagina">
         ExpoNexo — proyecto de portafolio de Luis Felipe Arias.

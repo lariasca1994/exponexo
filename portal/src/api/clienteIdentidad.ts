@@ -1,3 +1,4 @@
+import { fetchServicio } from "./mantenimiento";
 import { getInMemoryTokens, setInMemoryTokens } from "../sesion/almacenSesion";
 import type {
   AppointmentItem,
@@ -49,13 +50,13 @@ async function requestIdentity<T>(
     headers.set("Authorization", `Bearer ${bearer}`);
   }
 
-  let response = await fetch(`${IDENTIDAD_BASE_URL}${path}`, {
+  let response = await fetchServicio(IDENTIDAD_BASE_URL, path, {
     ...options,
     headers
   });
 
   if (response.status === 401 && !customBearerToken && refreshToken && path !== "/v1/sesion/refrescar") {
-    const refreshRes = await fetch(`${IDENTIDAD_BASE_URL}/v1/sesion/refrescar`, {
+    const refreshRes = await fetchServicio(IDENTIDAD_BASE_URL, "/v1/sesion/refrescar", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -67,7 +68,7 @@ async function requestIdentity<T>(
       const refreshed: TokenPairResponse = await refreshRes.json();
       setInMemoryTokens(refreshed.token_acceso, refreshed.token_refresco);
       headers.set("Authorization", `Bearer ${refreshed.token_acceso}`);
-      response = await fetch(`${IDENTIDAD_BASE_URL}${path}`, {
+      response = await fetchServicio(IDENTIDAD_BASE_URL, path, {
         ...options,
         headers
       });
@@ -368,7 +369,7 @@ export const identityApi = {
     }
     headers.set("X-Correlation-Id", crypto.randomUUID());
 
-    const res = await fetch(`${IDENTIDAD_BASE_URL}/v1/imagenes/subir`, {
+    const res = await fetchServicio(IDENTIDAD_BASE_URL, "/v1/imagenes/subir", {
       method: "POST",
       headers,
       body: formData

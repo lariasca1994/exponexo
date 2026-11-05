@@ -1,3 +1,4 @@
+import { fetchServicio } from "./mantenimiento";
 import { getInMemoryTokens } from "../sesion/almacenSesion";
 import type { ProblemDetails } from "../tipos/identidad";
 import { ApiClientError } from "./clienteIdentidad";
@@ -75,7 +76,7 @@ async function requestMesaAyuda<T>(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const response = await fetch(`${MESA_AYUDA_BASE_URL}${path}`, {
+  const response = await fetchServicio(MESA_AYUDA_BASE_URL, path, {
     ...options,
     headers
   });
