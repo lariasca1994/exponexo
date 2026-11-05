@@ -36,8 +36,9 @@ jobs:
           for i in $(seq 1 30); do
             sleep 10
             ahora=$(curl -s https://exponexo-portal.vercel.app/ | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
-            [ "$ahora" != "$antes" ] && echo "Portal publicado ($ahora)" && break
+            if [ "$ahora" != "$antes" ]; then echo "Portal publicado ($ahora)"; break; fi
           done
+          # Si el push no cambió el portal, el archivo sigue igual y se captura la versión vigente
 
       - name: Generar capturas
         run: |
