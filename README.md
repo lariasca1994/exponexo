@@ -102,8 +102,7 @@ pantalla de mantenimiento, que se recupera sola.
 ├── infra/                      Scripts que crean los recursos en cada nube y la depuración
 ├── pruebas/                    Pruebas de integración de punta a punta
 ├── docs/                       Manual, arquitectura, contratos, modelo de datos y decisiones
-│   ├── img/manual/             Capturas del manual (se regeneran solas)
-│   └── arquitectura.py         Genera el diagrama arquitectura.svg
+│   └── img/manual/             Capturas del manual (se regeneran solas)
 ├── .github/workflows/          Pruebas, despliegue, capturas y depuración quincenal
 ├── compose.yaml                Los tres servicios en local
 └── README.md                   Este archivo
@@ -129,7 +128,7 @@ pantalla de mantenimiento, que se recupera sola.
 
 Detalle técnico: [arquitectura](docs/ARQUITECTURA.md) · [modelo de datos](docs/MODELO-DE-DATOS.md) ·
 [contratos de API](docs/CONTRATOS-API.md) · [eventos](docs/EVENTOS.md) ·
-[decisiones (ADR)](docs/DECISIONES.md) · [ruta de aprendizaje](docs/RUTA-DE-APRENDIZAJE.md).
+[decisiones (ADR)](docs/DECISIONES.md).
 
 ---
 

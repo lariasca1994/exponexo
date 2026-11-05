@@ -58,5 +58,10 @@ playwright-report/
 # Imágenes generadas por datos-demo/imagenes.py (se suben a Cloudinary, no se versionan)
 datos-demo/imagenes/
 
-# Archivo de trabajo local (consultas de referencia)
+# Documentos personales y de creación: no hacen falta para usar ni desplegar el proyecto
 docs/consultas.docx
+docs/RUTA-DE-APRENDIZAJE.md
+docs/DISENO.md
+docs/arquitectura.py
+*.docx
+*.xlsx
