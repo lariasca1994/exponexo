@@ -6,6 +6,8 @@ from app.errors import ProblemDetailError
 from app.models.identity import PasskeyCredential, User
 from app.schemas.identity import (
     BackupCodesResponse,
+    ChangePasswordRequest,
+    TelegramLinkResponse,
     PasskeyInfo,
     PasskeyOptionsResponse,
     PasskeyRegisterRequest,
@@ -20,7 +22,10 @@ from app.security.passkeys import (
     create_passkey_registration_options,
 )
 from app.services.identity_service import (
+    change_password,
     confirm_totp_setup,
+    start_telegram_link,
+    unlink_telegram,
     enable_email_mfa,
     get_security_profile,
     regenerate_backup_codes,
@@ -38,6 +43,38 @@ def read_security_profile(
     db: Session = Depends(get_db),
 ) -> SecurityProfileResponse:
     return get_security_profile(db=db, user=current_user)
+
+
+@router.put("/contrasena")
+def update_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str | int]:
+    closed = change_password(
+        db=db,
+        user=current_user,
+        current_password=payload.contrasena_actual,
+        new_password=payload.nueva_contrasena,
+        keep_refresh_token=payload.token_refresco,
+    )
+    return {"mensaje": "Contraseña actualizada.", "sesiones_cerradas": closed}
+
+
+@router.post("/telegram", response_model=TelegramLinkResponse)
+def create_telegram_link(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TelegramLinkResponse:
+    return start_telegram_link(db=db, user=current_user)
+
+
+@router.delete("/telegram", response_model=SecurityProfileResponse)
+def remove_telegram_link(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SecurityProfileResponse:
+    return unlink_telegram(db=db, user=current_user)
 
 
 @router.post("/mfa/app", response_model=TotpSetupResponse)

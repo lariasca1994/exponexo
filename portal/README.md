@@ -3,9 +3,11 @@
 **React 19 · TypeScript · Vite · PWA**
 
 Aplicación web en español para expositores, visitantes, personal y administradores. Incluye
-registro, inicio de sesión en dos pasos, eventos, stands, reservas, entradas, agenda y mesa de
-ayuda. La pantalla de ingreso tiene una animación de entrada respetuosa con
-`prefers-reduced-motion`.
+registro con confirmación del correo, inicio de sesión en dos pasos o con llave de acceso,
+recuperación de contraseña, **Mi cuenta** (contraseña, Telegram, app autenticadora, respaldo, llaves
+y sesiones), eventos, stands, reservas, entradas, agenda y mesa de ayuda. Las pantallas de acceso comparten un panel de marca animado (el plano de
+un pabellón cuyos stands se reservan, un visitante que lo recorre y su entrada QR validada), que se
+detiene con `prefers-reduced-motion`.
 
 ## Contratos de API
 

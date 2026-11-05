@@ -121,7 +121,7 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Aplicar migraciones y cuentas fijas en Azure SQL
+      - name: Aplicar migraciones en Azure SQL
         # Se aplican aquí y no al arrancar el contenedor: así arranca rápido y Azure no lo reinicia
         # mientras migra. La base escala a cero: el primer intento la despierta y puede fallar
         # con tiempo agotado, por eso se reintenta.
@@ -133,7 +133,6 @@ jobs:
           SQLSERVER_USUARIO: ${{ secrets.SQLSERVER_USUARIO }}
           SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
           SQLSERVER_DRIVER_ODBC: ODBC Driver 18 for SQL Server
-          USUARIOS_INICIALES: ${{ secrets.USUARIOS_INICIALES }}
         run: |
           if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
             curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
@@ -143,9 +142,9 @@ jobs:
           fi
           python -m pip install -q -r requirements.txt
           for intento in 1 2 3 4 5; do
-            # Migraciones y cuentas fijas aquí (no al arrancar el contenedor): la base solo
+            # Migraciones aquí (no al arrancar el contenedor): la base solo
             # despierta en el despliegue y cuando alguien usa el servicio
-            python -m alembic upgrade head && python -m app.services.initial_users && exit 0
+            python -m alembic upgrade head && exit 0
             echo "::warning::Intento $intento de migración falló (la base puede estar despertando); reintento en 30 s"
             sleep 30
           done
@@ -173,6 +172,7 @@ jobs:
           SNS_TEMA_EVENTOS_ARN: ${{ vars.SNS_TEMA_EVENTOS_ARN }}
           IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
           PORTAL_URL: ${{ vars.PORTAL_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           python3 .github/scripts/variables_ejecucion.py identidad-reservas exponexo-identidad-reservas \
             "${{ secrets.AZURE_RESOURCE_GROUP }}" \
@@ -184,3 +184,27 @@ jobs:
             --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
             --query properties.configuration.ingress.fqdn --output tsv)
           curl --fail --retry 10 --retry-delay 15 --retry-all-errors "https://$fqdn/salud"
+
+      - name: Registrar el webhook del bot de Telegram
+        # Telegram entrega aquí el «Iniciar» con el que cada persona vincula su chat desde Mi cuenta.
+        # Solo se aceptan mensajes con el token secreto (derivado de INTERNO_SECRETO, igual que el servicio).
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          INTERNO_SECRETO: ${{ secrets.INTERNO_SECRETO }}
+          IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, urllib.request
+          secreto = hashlib.sha256(f"telegram:{os.environ['INTERNO_SECRETO']}".encode()).hexdigest()[:48]
+          datos = {"url": os.environ["IDENTIDAD_URL"].rstrip("/") + "/v1/telegram/webhook",
+                   "secret_token": secreto, "allowed_updates": ["message"], "drop_pending_updates": True}
+          peticion = urllib.request.Request(
+              f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/setWebhook",
+              data=json.dumps(datos).encode(), headers={"content-type": "application/json"})
+          with urllib.request.urlopen(peticion, timeout=30) as respuesta:
+              resultado = json.load(respuesta)
+          if not resultado.get("ok"):
+              raise SystemExit("Telegram rechazó el webhook")
+          print("Webhook de Telegram registrado")
+          PY
+

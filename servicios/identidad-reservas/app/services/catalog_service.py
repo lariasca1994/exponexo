@@ -620,6 +620,7 @@ def mark_reservation_paid(
                     "evento_id": reservation.evento_id,
                     "stand_id": reservation.stand_id,
                     "orden_pago_id": payment_order_id,
+                    "usuario_id": reservation.usuario_id,
                 },
                 ensure_ascii=False,
             ),

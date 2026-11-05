@@ -22,13 +22,12 @@ def _extract_envelope(raw_body: str) -> dict[str, Any]:
 def _obtain_service_jwt(http_client: httpx.Client, identidad_url: str, interno_secreto: str) -> str:
     response = http_client.post(
         f"{identidad_url.rstrip('/')}/v1/sesion/servicio",
-        headers={"X-Secreto-Interno": interno_secreto},
-        json={"servicio": "eventos-repartidor"},
-        timeout=5.0,
+        json={"servicio": "eventos-repartidor", "secreto_interno": interno_secreto},
+        # Identidad escala a cero: la primera llamada puede esperar a que despierte
+        timeout=60.0,
     )
     response.raise_for_status()
-    payload = response.json()
-    return str(payload["token_acceso"])
+    return str(response.json()["token_servicio"])
 
 
 def dispatch_envelope(

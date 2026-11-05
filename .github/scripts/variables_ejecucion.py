@@ -26,7 +26,8 @@ SERVICIOS = {
     ),
     "identidad-reservas": (
         ["SQLSERVER_CONTRASENA", "MFA_CLAVE_CIFRADO", "ENTRADA_QR_CLAVE_FIRMA", "INTERNO_SECRETO",
-         "JWT_CLAVE_PRIVADA_PEM", "BREVO_API_KEY", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+         "JWT_CLAVE_PRIVADA_PEM", "BREVO_API_KEY", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+         "TELEGRAM_BOT_TOKEN"],
         ["SQLSERVER_SERVIDOR", "SQLSERVER_BASE", "SQLSERVER_USUARIO", "BREVO_REMITENTE_CORREO",
          "AWS_REGION", "SNS_TEMA_EVENTOS_ARN", "IDENTIDAD_URL", "PORTAL_URL"],
         ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"],
@@ -39,8 +40,7 @@ SERVICIOS = {
     ),
     "eventos": (
         ["INTERNO_SECRETO", "BREVO_API_KEY", "TELEGRAM_BOT_TOKEN"],
-        ["TELEGRAM_CHAT_ID", "BREVO_REMITENTE_CORREO", "IDENTIDAD_URL", "PAGOS_URL", "MESA_AYUDA_URL",
-         "PORTAL_URL"],
+        ["BREVO_REMITENTE_CORREO", "IDENTIDAD_URL", "PAGOS_URL", "MESA_AYUDA_URL", "PORTAL_URL"],
         [],
     ),
 }
@@ -79,7 +79,7 @@ def leer(servicio: str) -> tuple[dict[str, str], set[str]]:
     elif servicio == "mesa-ayuda":
         derivados["ASPNETCORE_ENVIRONMENT"] = "Production"
     elif servicio == "eventos":
-        derivados = {"PORTAL_URL": portal}
+        derivados = {"PORTAL_URL": portal, "BREVO_REMITENTE_NOMBRE": "ExpoNexo"}
     valores.update(derivados)
     return valores, secretas
 
@@ -116,8 +116,10 @@ def main() -> None:
         funcion = sys.argv[2]
         # Una actualización de código o configuración en curso bloquea la siguiente
         subprocess.run(["aws", "lambda", "wait", "function-updated-v2", "--function-name", funcion], check=True)
+        # 120 s: la primera llamada a identidad puede esperar a que despierten el contenedor y la base
+        # (la cola tiene 180 s de visibilidad, por encima de este límite)
         subprocess.run(["aws", "lambda", "update-function-configuration", "--function-name", funcion,
-                        "--environment", json.dumps({"Variables": valores})],
+                        "--timeout", "120", "--environment", json.dumps({"Variables": valores})],
                        check=True, stdout=subprocess.DEVNULL)
         subprocess.run(["aws", "lambda", "wait", "function-updated-v2", "--function-name", funcion], check=True)
     print(f"Configuración de {servicio} aplicada ({len(valores)} variables, {len(secretas)} secretas).")

@@ -124,7 +124,9 @@ public sealed class DeviceAndSlaMonitorService
                     Carga = JsonSerializer.Serialize(new
                     {
                         ticket = ticket.Numero,
-                        nivel = ticket.NivelActual
+                        nivel = ticket.NivelActual,
+                        usuario_id = ticket.CreadoPorId,
+                        asignado_id = ticket.AsignadoAId
                     }),
                     CorrelacionId = Guid.NewGuid().ToString(),
                     CreadoEn = now

@@ -43,14 +43,15 @@ CREATE OR REPLACE PACKAGE BODY pkg_facturacion AS
         v_estado     VARCHAR2(20);
         v_referencia VARCHAR2(64);
         v_origen     VARCHAR2(20);
+        v_usuario    VARCHAR2(36);
         v_seq        NUMBER;
         v_subtotal   NUMBER(12, 2);
         v_impuesto   NUMBER(12, 2);
         v_ahora      TIMESTAMP WITH TIME ZONE := SYSTIMESTAMP;
         v_carga      CLOB;
     BEGIN
-        SELECT monto, estado, referencia, origen
-        INTO v_monto, v_estado, v_referencia, v_origen
+        SELECT monto, estado, referencia, origen, usuario_id
+        INTO v_monto, v_estado, v_referencia, v_origen, v_usuario
         FROM ordenes_pago
         WHERE id = p_orden_id
         FOR UPDATE;
@@ -94,7 +95,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_facturacion AS
 
         v_carga := '{"orden_id":"' || p_orden_id || '","referencia":"' || v_referencia ||
                    '","origen":"' || v_origen || '","monto":' || TO_CHAR(v_monto, 'FM9999999990.00') ||
-                   ',"numero_factura":"' || p_numero_factura || '"}';
+                   ',"numero_factura":"' || p_numero_factura || '","usuario_id":"' || v_usuario || '"}';
 
         INSERT INTO bandeja_salida (
             id, tipo, carga, correlacion_id, creado_en, publicado_en, intentos
@@ -115,11 +116,12 @@ CREATE OR REPLACE PACKAGE BODY pkg_facturacion AS
         v_estado      VARCHAR2(20);
         v_referencia  VARCHAR2(64);
         v_origen      VARCHAR2(20);
+        v_usuario     VARCHAR2(36);
         v_ahora       TIMESTAMP WITH TIME ZONE := SYSTIMESTAMP;
         v_carga       CLOB;
     BEGIN
-        SELECT monto, estado, referencia, origen
-        INTO v_monto_orden, v_estado, v_referencia, v_origen
+        SELECT monto, estado, referencia, origen, usuario_id
+        INTO v_monto_orden, v_estado, v_referencia, v_origen, v_usuario
         FROM ordenes_pago
         WHERE id = p_orden_id
         FOR UPDATE;
@@ -144,7 +146,8 @@ CREATE OR REPLACE PACKAGE BODY pkg_facturacion AS
         WHERE orden_id = p_orden_id;
 
         v_carga := '{"orden_id":"' || p_orden_id || '","referencia":"' || v_referencia ||
-                   '","origen":"' || v_origen || '","monto":' || TO_CHAR(p_monto, 'FM9999999990.00') || '}';
+                   '","origen":"' || v_origen || '","monto":' || TO_CHAR(p_monto, 'FM9999999990.00') ||
+                   ',"usuario_id":"' || v_usuario || '"}';
 
         INSERT INTO bandeja_salida (
             id, tipo, carga, correlacion_id, creado_en, publicado_en, intentos

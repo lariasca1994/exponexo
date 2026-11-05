@@ -147,7 +147,7 @@ export function Inicio() {
               y genera códigos de respaldo de emergencia.
             </p>
           </div>
-          <Link to="/perfil/seguridad" className="btn btn-secondary">
+          <Link to="/perfil" className="btn btn-secondary">
             Configurar seguridad y MFA
           </Link>
         </div>

@@ -67,10 +67,12 @@ pantalla de mantenimiento, que se recupera sola.
 | **Administrador** | Gestionar eventos, pabellones, stands y salas, y consultar el tablero de ocupación, recaudo y soporte. |
 
 - Verificación en dos pasos obligatoria: app autenticadora, código por correo o llave de acceso.
+- Recuperación de contraseña con código de un solo uso y **Mi cuenta** para cambiarla, vincular
+  Telegram, configurar la app autenticadora, los códigos de respaldo y las llaves de acceso.
 - Bloqueo temporal ante intentos fallidos y registro de eventos de seguridad.
 - QR firmados para entradas y cobros: uno alterado se rechaza.
-- Avisos por correo y Telegram cuando ocurre algo importante (pago aprobado, cita aceptada, ticket
-  vencido).
+- Avisos por correo y Telegram a la persona afectada (pago aprobado, cita aceptada, ticket
+  vencido). Los destinatarios se leen de la base al enviar; nunca viven en la configuración.
 - Portal instalable (PWA) con tema claro y oscuro, y una paleta con un color por base de datos:
   rojo SQL Server, rojo Oracle y verde MongoDB.
 
@@ -143,7 +145,7 @@ Detalle técnico: [arquitectura](docs/ARQUITECTURA.md) · [modelo de datos](docs
 | ![MongoDB](https://img.shields.io/badge/MongoDB_Atlas-00684A?style=for-the-badge&logo=mongodb&logoColor=white) | Guarda tickets, dispositivos y lecturas (estas vencen solas a los 15 días). |
 | ![AWS](https://img.shields.io/badge/AWS-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white) | SNS reparte los eventos a una cola SQS por función; dos Lambdas los entregan y envían los avisos. |
 | ![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white) | Guarda las portadas de eventos, logos y planos generados automáticamente. |
-| ![Brevo](https://img.shields.io/badge/Brevo-0B996E?style=for-the-badge&logo=brevo&logoColor=white) ![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white) | Envían los códigos de verificación y los avisos. |
+| ![Brevo](https://img.shields.io/badge/Brevo-0B996E?style=for-the-badge&logo=brevo&logoColor=white) ![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white) | Envían los códigos de verificación y los avisos a cada persona; el bot de Telegram vincula el chat de cada cuenta desde **Mi cuenta**. |
 | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white) | Prueba y despliega cada servicio con OIDC, regenera las capturas del manual y depura cada 15 días. |
 | ![qa-evidencia](https://img.shields.io/badge/qa--evidencia-2EAD33?style=for-the-badge&logo=playwright&logoColor=white) | Prueba la demo automáticamente cada día hábil y publica la evidencia. |
 
@@ -158,13 +160,16 @@ El paso a paso completo, campo por campo y con capturas, está en el
    estado de cada stand (verde disponible, naranja reservado, azul pagado).
 2. **Crear cuenta:** en **Registro** escribe nombre, correo, tipo de participación (visitante o
    expositor) y contraseña; confirma el código que llega al correo.
-3. **Ingresar:** correo y contraseña, y luego el segundo paso (app, correo o llave de acceso).
-4. **Expositor:** elige un stand, pulsa **Reservar este stand** y en **Mis Reservas** pulsa
+3. **Ingresar:** correo y contraseña, y luego el segundo paso (app, correo o respaldo), o con una
+   llave de acceso. **¿Olvidaste tu contraseña?** la restablece con un código por correo.
+4. **Mi cuenta** (tu nombre, arriba a la derecha): cambia la contraseña, vincula Telegram y
+   gestiona tu verificación en dos pasos.
+5. **Expositor:** elige un stand, pulsa **Reservar este stand** y en **Mis Reservas** pulsa
    **Pagar con QR**; la factura aparece en **Facturas**.
-5. **Visitante:** en **Mis Entradas → Adquirir nueva entrada** paga y activa tu QR; en
+6. **Visitante:** en **Mis Entradas → Adquirir nueva entrada** paga y activa tu QR; en
    **Agenda B2B** pide citas con los expositores.
-6. **Personal:** **Validar QR en puerta**, **Mesa de ayuda** y **Dispositivos**.
-7. **Administrador:** **Catálogo** y **Tablero**.
+7. **Personal:** **Validar QR en puerta**, **Mesa de ayuda** y **Dispositivos**.
+8. **Administrador:** **Catálogo** y **Tablero**.
 
 ### Si un servicio no responde
 

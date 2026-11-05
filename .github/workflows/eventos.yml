@@ -87,7 +87,7 @@ jobs:
           mkdir -p paquete_avisos/avisos
           python -m pip install -r avisos/requirements.txt -t paquete_avisos
           touch paquete_avisos/avisos/__init__.py
-          cp avisos/funcion.py avisos/correo.py avisos/telegram.py paquete_avisos/avisos/
+          cp avisos/funcion.py avisos/correo.py avisos/telegram.py avisos/contactos.py paquete_avisos/avisos/
           cp -R avisos/plantillas paquete_avisos/avisos/
           (cd paquete_avisos && zip -qr ../avisos.zip .)
 
@@ -126,7 +126,6 @@ jobs:
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
           BREVO_REMITENTE_CORREO: ${{ secrets.BREVO_REMITENTE_CORREO }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           IDENTIDAD_URL: ${{ vars.IDENTIDAD_URL }}
           PAGOS_URL: ${{ vars.PAGOS_URL }}
           MESA_AYUDA_URL: ${{ vars.MESA_AYUDA_URL }}

@@ -44,9 +44,18 @@ contenedor escribe la llave JWT desde `JWT_CLAVE_PRIVADA_PEM` y levanta la API; 
 es inválida, no arranca.
 La bandeja de salida se publica en el tema SNS (`SNS_TEMA_EVENTOS_ARN`) justo después de cada
 operación que escribe, sin sondeos periódicos: así Azure SQL se pausa cuando nadie usa el servicio y
-no se consume su cuota gratuita. Las cuentas fijas de administración, personal y QA llegan en el
-secreto `USUARIOS_INICIALES` y el workflow las crea o ajusta después de las migraciones. El registro público solo permite elegir visitante (por
-defecto) o expositor.
+no se consume su cuota gratuita. Las cuentas de personal y administración viven solo en la base; el
+registro público solo permite elegir visitante (por defecto) o expositor.
+
+## Cuenta y avisos
+
+- `PUT /v1/perfil/contrasena` cambia la contraseña y cierra las demás sesiones;
+  `POST /v1/cuentas/recuperar` la restablece con un código de un solo uso, cierra todas las
+  sesiones y levanta el bloqueo. Ambos dejan un evento para avisar a la persona.
+- `POST /v1/perfil/telegram` entrega el enlace del bot; Telegram envía el «Iniciar» a
+  `/v1/telegram/webhook` (solo con el token secreto) y el chat queda en la cuenta.
+- `GET /v1/interno/contactos` da a la función de avisos el correo y el chat de las personas
+  afectadas, leídos de la base en el momento de enviar.
 
 ## Depuración cada 15 días
 

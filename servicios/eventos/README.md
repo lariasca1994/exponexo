@@ -3,7 +3,10 @@
 **Python · Amazon SQS · AWS Lambda**
 
 El servicio contiene dos consumidores: `repartidor/funcion.py` enruta eventos a las APIs internas;
-`avisos/funcion.py` envía correo con Brevo y mensajes de Telegram. Cada función mantiene su propio
+`avisos/funcion.py` envía cada aviso por correo (Brevo) y por Telegram a la persona afectada. Los
+destinatarios no están en la configuración: el evento dice a quién afecta y `avisos/contactos.py`
+pide a identidad su correo y su chat de Telegram vinculado. Correo y Telegram se envían por
+separado: si uno falla, el otro sale igual. Cada función mantiene su propio
 `requirements.txt`; sus pruebas viven en `pruebas/`.
 
 Los tipos de evento y varios campos actuales conservan nombres en español. La transición a los

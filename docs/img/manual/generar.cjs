@@ -62,7 +62,14 @@ async function captura(navegador, nombre, ruta, { esperar, preparar, completa = 
       preparar: async (p) => {
         await p.fill("#correo", "ana.perez@ejemplo.com");
         await p.fill("#contrasena", "Ejemplo-Clave-2026");
-        await marcar(p, ["#correo", "#contrasena", "button[type=submit]"]);
+        await marcar(p, ["#correo", "#contrasena", ".login-olvido", "button[type=submit]"]);
+      },
+    });
+    await captura(navegador, "07-recuperar", "/recuperar", {
+      esperar: "¿Olvidaste tu contraseña?",
+      preparar: async (p) => {
+        await p.fill("#correo", "ana.perez@ejemplo.com");
+        await marcar(p, ["#correo", "button[type=submit]"]);
       },
     });
     await captura(navegador, "04-eventos", "/eventos", { esperar: "Ver plano de stands", completa: true });

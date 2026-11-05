@@ -1,15 +1,21 @@
 import React, { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { identityApi } from "../../api/clienteIdentidad";
+import { PanelMarca } from "../../componentes/PanelMarca";
 import { useSession } from "../../sesion/almacenSesion";
+
+type Metodo = "app" | "correo" | "respaldo";
+
+const ETIQUETAS: Record<Metodo, string> = {
+  app: "App autenticadora",
+  correo: "Código por correo",
+  respaldo: "Código de respaldo"
+};
 
 export function SegundoPaso() {
   const navigate = useNavigate();
   const { pendingMfa, establishSession } = useSession();
-
-  const [metodo, setMetodo] = useState<"app" | "correo" | "respaldo">(
-    (pendingMfa?.metodo_preferido as "app" | "correo") || "correo"
-  );
+  const [metodo, setMetodo] = useState<Metodo>((pendingMfa?.metodo_preferido as Metodo) || "correo");
   const [codigo, setCodigo] = useState("");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +25,13 @@ export function SegundoPaso() {
     return <Navigate to="/ingreso" replace />;
   }
 
-  const handleEnviarCodigoCorreo = async () => {
+  const metodos: Metodo[] = [
+    ...(pendingMfa.metodos_disponibles.includes("app") ? (["app"] as Metodo[]) : []),
+    "correo",
+    "respaldo"
+  ];
+
+  const enviarCodigoCorreo = async () => {
     setError(null);
     setMensaje(null);
     try {
@@ -35,10 +47,7 @@ export function SegundoPaso() {
     setError(null);
     setCargando(true);
     try {
-      const tokens = await identityApi.loginStep2(pendingMfa.pase_segundo_paso, {
-        metodo,
-        codigo
-      });
+      const tokens = await identityApi.loginStep2(pendingMfa.pase_segundo_paso, { metodo, codigo: codigo.trim() });
       establishSession(tokens);
       navigate("/inicio");
     } catch (err) {
@@ -49,66 +58,71 @@ export function SegundoPaso() {
   };
 
   return (
-    <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2 style={{ marginTop: 0 }}>Verificación en dos pasos</h2>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem" }}>
-          Cuenta: <strong>{pendingMfa.correo}</strong>
-        </p>
+    <div className="login-page">
+      <section className="login-panel" aria-labelledby="mfa-title">
+        <div className="login-form-content">
+          <p className="login-step">Acceso seguro <span aria-hidden="true">·</span> Paso 2 de 2</p>
+          <h1 id="mfa-title">Verifica que eres tú</h1>
+          <p className="login-description">
+            Cuenta <strong>{pendingMfa.correo}</strong>. Elige cómo confirmar tu identidad.
+          </p>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {mensaje && <div className="alert alert-success">{mensaje}</div>}
+          {error && <div className="alert alert-error" role="alert">{error}</div>}
+          {mensaje && <div className="alert alert-success">{mensaje}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="metodo">Método de verificación</label>
-            <select
-              id="metodo"
-              className="select-field"
-              value={metodo}
-              onChange={(e) => setMetodo(e.target.value as "app" | "correo" | "respaldo")}
-            >
-              {pendingMfa.metodos_disponibles.includes("app") && (
-                <option value="app">Aplicación autenticadora (TOTP)</option>
-              )}
-              <option value="correo">Código enviado por correo</option>
-              <option value="respaldo">Código de respaldo de un solo uso</option>
-            </select>
+          <div className="selector-metodo" role="radiogroup" aria-label="Método de verificación">
+            {metodos.map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={metodo === m}
+                className={metodo === m ? "activo" : ""}
+                onClick={() => {
+                  setMetodo(m);
+                  setCodigo("");
+                }}
+              >
+                {ETIQUETAS[m]}
+              </button>
+            ))}
           </div>
 
-          {metodo === "correo" && (
-            <div style={{ marginBottom: "1rem" }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ width: "100%" }}
-                onClick={handleEnviarCodigoCorreo}
-              >
+          <form onSubmit={handleSubmit}>
+            {metodo === "correo" && (
+              <button type="button" className="btn btn-secondary login-submit" onClick={enviarCodigoCorreo}>
                 Enviar código a mi correo
               </button>
+            )}
+            <div className="form-group" style={{ marginTop: "var(--esp-4)" }}>
+              <label htmlFor="codigo">{metodo === "respaldo" ? "Código de respaldo (XXXX-XXXX)" : "Código de 6 dígitos"}</label>
+              <input
+                id="codigo"
+                className="input-field input-codigo"
+                type="text"
+                inputMode={metodo === "respaldo" ? "text" : "numeric"}
+                autoComplete="one-time-code"
+                maxLength={16}
+                required
+                autoFocus
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                placeholder={metodo === "respaldo" ? "A1B2-C3D4" : "123456"}
+              />
             </div>
-          )}
+            <button type="submit" className="btn btn-primary login-submit" disabled={cargando}>
+              {cargando ? "Verificando…" : "Confirmar e ingresar"}
+            </button>
+          </form>
 
-          <div className="form-group">
-            <label htmlFor="codigo">
-              {metodo === "respaldo" ? "Código de respaldo (XXXX-XXXX)" : "Código de 6 dígitos"}
-            </label>
-            <input
-              id="codigo"
-              className="input-field"
-              type="text"
-              required
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              placeholder={metodo === "respaldo" ? "A1B2-C3D4" : "123456"}
-            />
-          </div>
+          <p className="login-register">
+            ¿No eres tú? <Link to="/ingreso">Volver al ingreso</Link>
+          </p>
+        </div>
+        <p className="login-panel-footer">La verificación en dos pasos es obligatoria en todas las cuentas.</p>
+      </section>
 
-          <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={cargando}>
-            {cargando ? "Verificando código…" : "Confirmar e ingresar"}
-          </button>
-        </form>
-      </div>
+      <PanelMarca eyebrow="Acceso protegido" titulo="Un paso más y estás dentro." texto="Tu segundo factor protege tus reservas, pagos y entradas aunque alguien conozca tu contraseña." />
     </div>
   );
 }

@@ -101,7 +101,7 @@ def test_repartidor_partial_batch_failure_reports_only_failed_record() -> None:
 
 def test_avisos_idempotency_and_sensitive_data_guard(monkeypatch) -> None:
     # Sin credenciales los avisos se simulan: la prueba nunca debe enviar correos ni mensajes reales
-    for name in ("BREVO_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+    for name in ("BREVO_API_KEY", "TELEGRAM_BOT_TOKEN", "IDENTIDAD_URL", "INTERNO_SECRETO"):
         monkeypatch.delenv(name, raising=False)
     reset_processed_events()
 
@@ -138,3 +138,43 @@ def test_avisos_idempotency_and_sensitive_data_guard(monkeypatch) -> None:
 
     result = avisos_handler(sqs_batch)
     assert result == {"batchItemFailures": [{"itemIdentifier": "m-bad-sensitive"}]}
+
+
+def test_avisos_van_por_correo_y_telegram_a_la_persona_afectada(monkeypatch) -> None:
+    import avisos.funcion as funcion
+
+    reset_processed_events()
+    consultas: list[dict] = []
+    correos: list[str] = []
+    telegrams: list[str] = []
+
+    def contactos(ids=None, correos_=None, roles=None, http_client=None, **_):
+        consultas.append({"ids": ids, "roles": roles})
+        return [
+            {"correo": "ana@empresa.co", "nombre": "Ana", "telegram_chat_id": "111"},
+            {"correo": "sin.telegram@empresa.co", "nombre": "Luis", "telegram_chat_id": None},
+        ]
+
+    monkeypatch.setattr(funcion, "resolve_contacts", lambda ids, correos_, roles, http_client=None: contactos(ids, correos_, roles))
+    monkeypatch.setattr(funcion, "send_brevo_email", lambda correo, *a, **k: correos.append(correo))
+    monkeypatch.setattr(funcion, "send_telegram_message", lambda chat, texto, *a, **k: telegrams.append(chat))
+
+    pago = {"id": "evt-pago-1", "tipo": "pago.aprobado",
+            "datos": {"orden_id": "o-1", "numero_factura": "FE-000001", "usuario_id": "u-9"}}
+    resultado = funcion.process_notification_envelope(pago)
+    assert consultas[-1] == {"ids": ["u-9"], "roles": None}
+    assert resultado["canal"] == "correo+telegram"
+    assert correos == ["ana@empresa.co", "sin.telegram@empresa.co"]
+    assert telegrams == ["111"]
+
+    caido = {"id": "evt-disp-1", "tipo": "dispositivo.caido", "datos": {"dispositivo": "K-01", "ticket": "T-1"}}
+    funcion.process_notification_envelope(caido)
+    assert consultas[-1]["roles"] == ["personal", "administrador"]
+
+    # Si Telegram falla, el correo sale igual
+    def falla(*_a, **_k):
+        raise RuntimeError("telegram caido")
+
+    monkeypatch.setattr(funcion, "send_telegram_message", falla)
+    otro = {"id": "evt-pago-2", "tipo": "pago.reembolsado", "datos": {"orden_id": "o-2", "usuario_id": "u-9"}}
+    assert funcion.process_notification_envelope(otro)["enviados"] == {"correo": 2, "telegram": 0}

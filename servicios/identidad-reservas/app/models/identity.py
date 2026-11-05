@@ -60,6 +60,8 @@ class User(Base):
     )
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     correo_verificado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Chat de Telegram vinculado por la propia persona desde su perfil (avisos personales)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -126,7 +128,7 @@ class VerificationCode(Base):
     __tablename__ = "codigos_verificacion"
     __table_args__ = (
         CheckConstraint(
-            "proposito IN ('ingreso', 'confirmar_correo', 'recuperar', 'activar_correo')",
+            "proposito IN ('ingreso', 'confirmar_correo', 'recuperar', 'activar_correo', 'telegram')",
             name="ck_codigos_verificacion_proposito",
         ),
         Index("ix_codigos_verificacion_usuario_id", "usuario_id"),

@@ -102,6 +102,7 @@ class SessionInfo(BaseModel):
 
 class SecurityProfileResponse(BaseModel):
     usuario: AccountResponse
+    telegram_vinculado: bool = False
     metodos_mfa: list[MfaFactorInfo]
     metodo_preferido: str | None
     codigos_respaldo_disponibles: int
@@ -146,3 +147,23 @@ class PasskeyLoginVerifyRequest(BaseModel):
     correo: EmailStr
     desafio_token: str
     credencial: dict[str, Any]
+
+
+class ChangePasswordRequest(BaseModel):
+    contrasena_actual: str = Field(min_length=1, max_length=128)
+    nueva_contrasena: str = Field(min_length=10, max_length=128)
+    # Sesión desde la que se cambia: se conserva y se cierran las demás
+    token_refresco: str | None = None
+
+
+class TelegramLinkResponse(BaseModel):
+    enlace: str
+    vence_en_segundos: int
+
+
+class ContactInfo(BaseModel):
+    usuario_id: str
+    correo: str
+    nombre: str
+    rol: str
+    telegram_chat_id: str | None

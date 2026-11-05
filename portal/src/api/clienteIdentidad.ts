@@ -157,6 +157,70 @@ export const identityApi = {
     return requestIdentity<SecurityProfileResponse>("/v1/perfil/seguridad");
   },
 
+  requestPasswordRecovery(correo: string) {
+    return requestIdentity<{ mensaje: string }>("/v1/cuentas/recuperar", {
+      method: "POST",
+      body: JSON.stringify({ correo })
+    });
+  },
+
+  resetPassword(payload: { correo: string; codigo: string; nueva_contrasena: string }) {
+    return requestIdentity<{ mensaje: string }>("/v1/cuentas/recuperar", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  changePassword(payload: { contrasena_actual: string; nueva_contrasena: string }) {
+    const { refreshToken } = getInMemoryTokens();
+    return requestIdentity<{ mensaje: string; sesiones_cerradas: number }>("/v1/perfil/contrasena", {
+      method: "PUT",
+      body: JSON.stringify({ ...payload, token_refresco: refreshToken })
+    });
+  },
+
+  startTelegramLink() {
+    return requestIdentity<{ enlace: string; vence_en_segundos: number }>("/v1/perfil/telegram", {
+      method: "POST"
+    });
+  },
+
+  unlinkTelegram() {
+    return requestIdentity<SecurityProfileResponse>("/v1/perfil/telegram", { method: "DELETE" });
+  },
+
+  enableEmailMfa() {
+    return requestIdentity<SecurityProfileResponse>("/v1/perfil/mfa/correo", { method: "POST" });
+  },
+
+  passkeyRegistrationOptions() {
+    return requestIdentity<{ opciones: Record<string, unknown>; desafio_token: string }>(
+      "/v1/perfil/llaves/opciones",
+      { method: "POST" }
+    );
+  },
+
+  registerPasskey(payload: { nombre_dispositivo: string; desafio_token: string; credencial: unknown }) {
+    return requestIdentity<{ id: string; nombre_dispositivo: string }>("/v1/perfil/llaves", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  passkeyLoginOptions(correo: string) {
+    return requestIdentity<{ opciones: Record<string, unknown>; desafio_token: string }>(
+      "/v1/sesion/llave/opciones",
+      { method: "POST", body: JSON.stringify({ correo }) }
+    );
+  },
+
+  passkeyLogin(payload: { correo: string; desafio_token: string; credencial: unknown }) {
+    return requestIdentity<TokenPairResponse>("/v1/sesion/llave", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
   startTotpSetup() {
     return requestIdentity<TotpSetupResponse>("/v1/perfil/mfa/app", {
       method: "POST"

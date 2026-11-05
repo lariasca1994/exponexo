@@ -18,11 +18,10 @@ from app.schemas.identity import (
 from app.security.mfa import generate_email_otp_code
 from app.security.passwords import (
     hash_fingerprint,
-    hash_password,
     validate_password_strength,
 )
 from app.services.email_sender import send_verification_email
-from app.services.identity_service import confirm_email, register_account
+from app.services.identity_service import complete_password_reset, confirm_email, register_account
 
 
 router = APIRouter(prefix="/v1/cuentas", tags=["Cuentas"])
@@ -112,6 +111,7 @@ def recover_password(
         verif is None
         or vence_utc is None
         or vence_utc < now
+        or verif.intentos >= get_settings().mfa_max_attempts
         or not secrets.compare_digest(verif.huella, hash_fingerprint(payload.codigo))
     ):
         if verif is not None:
@@ -125,6 +125,6 @@ def recover_password(
         )
 
     verif.usado_en = now
-    user.hash_contrasena = hash_password(payload.nueva_contrasena)
+    complete_password_reset(db, user, payload.nueva_contrasena)
     db.commit()
     return {"mensaje": "Contraseña actualizada correctamente."}

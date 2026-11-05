@@ -48,7 +48,7 @@ a.tarjeta:hover,
 }
 
 /* Dentro de una grilla el espacio lo pone el gap */
-:is(.grid-2, .grid-3, .grid-4) > .panel-card {
+:is(.grid-2, .grid-3, .grid-4, .cuenta-grid) > .panel-card {
   margin-top: 0;
 }
 
@@ -512,4 +512,255 @@ summary {
 .mantenimiento__cuenta {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+}
+
+/* ---- Campo de contraseña con ojo y medidor ------------------------------- */
+.campo-contrasena {
+  position: relative;
+}
+
+.campo-contrasena .input-field {
+  width: 100%;
+  padding-right: 3rem;
+}
+
+.campo-contrasena-ojo {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.campo-contrasena-ojo:hover {
+  color: var(--brand-primary);
+  background: var(--bg-subtle);
+}
+
+.campo-contrasena-ojo:focus-visible {
+  outline: none;
+  box-shadow: var(--anillo-foco);
+}
+
+.medidor-contrasena {
+  display: grid;
+  gap: var(--esp-2);
+  margin-top: var(--esp-1);
+}
+
+.medidor-barras {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.medidor-barras span {
+  height: 4px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-normal);
+}
+
+.medidor-debil .medidor-barras .llena { background: var(--db-sqlserver); }
+.medidor-media .medidor-barras .llena { background: var(--status-reserved); }
+.medidor-fuerte .medidor-barras .llena { background: var(--status-available); }
+
+.panel-card .medidor-contrasena ul,
+.medidor-contrasena ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.medidor-contrasena li::before {
+  content: "○ ";
+}
+
+.medidor-contrasena li.cumple {
+  color: var(--status-available);
+}
+
+.medidor-contrasena li.cumple::before {
+  content: "✓ ";
+}
+
+/* ---- Mi cuenta ----------------------------------------------------------- */
+.cuenta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--esp-5);
+  align-items: start;
+}
+
+.cuenta-tarjeta h2 {
+  margin: 0;
+}
+
+.cuenta-titulo {
+  font-size: var(--texto-lg);
+}
+
+.cuenta-ayuda {
+  margin: var(--esp-2) 0 var(--esp-4);
+  font-size: var(--texto-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.cuenta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--esp-2);
+  margin-top: var(--esp-3);
+}
+
+.cuenta-encabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-4);
+  padding-bottom: var(--esp-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cuenta-encabezado h2 {
+  font-size: var(--texto-xl);
+}
+
+.avatar-grande {
+  display: grid;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  place-items: center;
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--db-sqlserver), var(--db-oracle) 55%, var(--db-mongodb));
+  border-radius: 50%;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--db-sqlserver) 30%, transparent);
+}
+
+.chip-rol {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
+  border-radius: var(--radius-full);
+}
+
+.cuenta-datos {
+  display: grid;
+  margin: 0;
+}
+
+.cuenta-datos > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: var(--esp-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cuenta-datos > div:last-child {
+  border-bottom: 0;
+}
+
+.cuenta-datos dt {
+  font-size: var(--texto-sm);
+  color: var(--text-secondary);
+}
+
+.cuenta-datos dd {
+  margin: 0;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.estado {
+  display: inline-block;
+  padding: 1px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-full);
+}
+
+.estado-ok {
+  color: var(--feedback-success-text);
+  background: var(--feedback-success-bg);
+}
+
+.panel-card .cuenta-lista {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0 0 var(--esp-3);
+  padding: 0;
+  list-style: none;
+}
+
+.cuenta-lista li {
+  display: grid;
+  gap: 2px;
+  padding: var(--esp-3);
+  font-size: var(--texto-sm);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+}
+
+.cuenta-lista li span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.cuenta-llave {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.cuenta-llave .input-field {
+  flex: 1 1 180px;
+}
+
+.cuenta-totp {
+  text-align: center;
+}
+
+.cuenta-totp .form-group {
+  text-align: left;
+}
+
+.cuenta-pasos p {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--text-secondary);
+}
+
+.codigos-respaldo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--esp-2);
+  margin-top: var(--esp-2);
 }

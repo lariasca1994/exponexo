@@ -49,6 +49,7 @@ export interface SessionInfo {
 
 export interface SecurityProfileResponse {
   usuario: UserAccount;
+  telegram_vinculado: boolean;
   metodos_mfa: MfaFactorInfo[];
   metodo_preferido: string | null;
   codigos_respaldo_disponibles: number;

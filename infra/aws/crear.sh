@@ -78,7 +78,7 @@ PY
     for intento in 1 2 3 4 5 6; do   # el rol recién creado puede tardar en ser asumible
       aws lambda create-function --function-name "exponexo-$f" --runtime python3.14 \
         --handler "$f.funcion.handler" --role "arn:aws:iam::$CUENTA:role/$ROL" \
-        --zip-file "fileb://$ZIP" --timeout 30 --memory-size 256 >/dev/null && break
+        --zip-file "fileb://$ZIP" --timeout 120 --memory-size 256 >/dev/null && break
       [ "$intento" = 6 ] && exit 1
       sleep 10
     done

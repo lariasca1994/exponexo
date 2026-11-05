@@ -231,7 +231,8 @@ app.MapPost("/v1/tickets", async (
         {
             ticket = ticket.Numero,
             prioridad = ticket.Prioridad,
-            ubicacion = ticket.Ubicacion
+            ubicacion = ticket.Ubicacion,
+            usuario_id = user.Sub
         }),
         CorrelacionId = corrId,
         CreadoEn = now

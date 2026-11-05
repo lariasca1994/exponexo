@@ -61,6 +61,7 @@ Es una demo de portafolio:
 | **SLA** | Tiempo máximo comprometido para atender un ticket según su prioridad. |
 | **Verificación en dos pasos (MFA)** | Además de la contraseña, se pide un código de tu app autenticadora o de tu correo. |
 | **Llave de acceso** | Ingreso con la huella, el rostro o el PIN del dispositivo, sin contraseña. |
+| **Vincular Telegram** | Conectar tu chat de Telegram con tu cuenta para recibir ahí tus avisos. |
 | **API** | Puerta de entrada de un programa para que otros programas le pidan o le envíen datos. |
 | **Modo mantenimiento** | Pantalla que aparece cuando un servicio no responde; se recupera sola cuando vuelve. |
 
@@ -72,7 +73,7 @@ Es una demo de portafolio:
 | Identidad y reservas | Azure Container Apps | Azure SQL | Cuentas, verificación en dos pasos, catálogo, reservas, entradas y agenda |
 | Pagos | Google Cloud Run | Oracle Autonomous | Órdenes, cobro con QR y facturas |
 | Mesa de ayuda | Azure Container Apps | MongoDB Atlas | Tickets con SLA y monitoreo de dispositivos |
-| Avisos | AWS Lambda | — | Correos (Brevo) y alertas por Telegram |
+| Avisos | AWS Lambda | Azure SQL (destinatarios) | Correo (Brevo) y Telegram a la persona afectada |
 | Imágenes | Cloudinary | — | Portadas de eventos, logos y planos |
 
 ## 4. Paso a paso
@@ -105,13 +106,39 @@ ferias publicadas, sus fechas y su aforo.
 | # | Campo | Qué escribir |
 |:-:|---|---|
 | 1 | Correo electrónico | El correo de tu cuenta |
-| 2 | Contraseña | Tu contraseña |
-| 3 | Continuar | Pasa al segundo paso: código de tu app autenticadora, código por correo o llave de acceso |
+| 2 | Contraseña | Tu contraseña (el ojo la muestra u oculta) |
+| 3 | ¿Olvidaste tu contraseña? | Abre la recuperación con código por correo (ver 4.4) |
+| 4 | Continuar | Pasa al segundo paso: código de tu app autenticadora, código por correo o código de respaldo |
 
-En **Seguridad** (con la sesión iniciada) activas la app autenticadora, eliges el método que se
-pide por defecto, generas códigos de respaldo y registras llaves de acceso.
+También puedes pulsar **Ingresar con llave de acceso** para entrar con la huella, el rostro o el PIN
+del dispositivo, si ya registraste una llave en **Mi cuenta**.
 
-### 4.4 Plano de stands (expositores)
+### 4.4 Recuperar la contraseña
+
+![Recuperación de contraseña con sus campos numerados](img/manual/07-recuperar.png)
+
+| # | Campo | Qué escribir |
+|:-:|---|---|
+| 1 | Correo electrónico | El correo de tu cuenta |
+| 2 | Enviar código | Envía un código de un solo uso a tu correo; la respuesta es la misma exista o no la cuenta |
+
+En el segundo paso escribes el **código**, la **nueva contraseña** (con el medidor de reglas) y su
+**confirmación**. Al restablecerla se cierran todas tus sesiones y te llega un aviso por correo y
+Telegram. El código vence en pocos minutos y deja de servir tras varios intentos fallidos.
+
+### 4.5 Mi cuenta
+
+Con la sesión iniciada, pulsa tu nombre en la esquina superior derecha:
+
+- **Datos:** nombre, rol, correo, estado de Telegram y de la verificación en dos pasos.
+- **Cambiar contraseña:** pide la actual y la nueva; cierra tus sesiones en otros dispositivos.
+- **Avisos por Telegram:** pulsa **Vincular Telegram**, pulsa **Iniciar** en el bot de ExpoNexo y
+  vuelve con **Ya pulsé Iniciar**. Desde ahí tus avisos llegan por correo y por Telegram.
+- **App autenticadora:** escanea el QR y escribe el primer código; queda como método por defecto.
+- **Código por correo y respaldo:** elige el método por defecto y genera códigos de respaldo.
+- **Llaves de acceso** y **sesiones activas**.
+
+### 4.6 Plano de stands (expositores)
 
 ![Plano de stands con un stand seleccionado](img/manual/05-plano-stands.png)
 
@@ -123,13 +150,13 @@ pide por defecto, generas códigos de respaldo y registras llaves de acceso.
 4. En **Mis Reservas** pulsa **Pagar con QR**: se genera un QR de cobro con vigencia corta. Al aprobarse
    el pago la reserva queda pagada y la factura aparece en **Facturas**.
 
-### 4.5 Entradas y agenda de negocios (visitantes)
+### 4.7 Entradas y agenda de negocios (visitantes)
 
 - En **Mis Entradas → Adquirir nueva entrada** elige el evento y el tipo, y pulsa **Pagar y activar QR**; ya pagada aparece con su QR de acceso.
 - En **Agenda B2B** busca expositores, revisa sus horarios libres y pide una cita. Cuando el
   expositor la acepta, el sistema asigna una sala libre y avisa a ambos.
 
-### 4.6 Operación del recinto (personal)
+### 4.8 Operación del recinto (personal)
 
 - **Validar QR en puerta**: lee la entrada en la puerta; una entrada usada o alterada se rechaza.
 - **Mesa de ayuda**: crea y atiende tickets; cada prioridad tiene su tiempo de atención y un ticket
@@ -137,24 +164,26 @@ pide por defecto, generas códigos de respaldo y registras llaves de acceso.
 - **Dispositivos**: estado de kioscos, torniquetes y pantallas; si uno deja de reportar se abre un
   ticket automáticamente.
 
-### 4.7 Administración
+### 4.9 Administración
 
 - **Catálogo**: crea y edita eventos, pabellones, stands y salas.
 - **Tablero**: ocupación de stands, recaudo, entradas vendidas y estado del soporte.
 
-### 4.8 Tema claro y oscuro
+### 4.10 Tema claro y oscuro
 
 ![Portada en tema oscuro](img/manual/06-portada-oscuro.png)
 
-El botón **Tema oscuro / Tema claro** cambia los colores y se recuerda en las siguientes visitas.
+El botón con la luna o el sol, junto a **Ingresar**, cambia los colores y se recuerda en las siguientes visitas.
 
-### 4.9 Preguntas frecuentes
+### 4.11 Preguntas frecuentes
 
 - **¿Por qué la primera carga tarda?** Los servicios duermen sin uso para no generar costos;
   despiertan con la primera visita.
 - **No me llegó el código por correo.** Revisa la carpeta de spam y pide uno nuevo desde el
   segundo paso.
 - **Mi reserva desapareció.** Venció sin pagarse: el stand volvió a quedar disponible.
+- **No me llegan avisos a Telegram.** Vincúlalo en **Mi cuenta → Avisos por Telegram**; los avisos
+  siempre llegan también al correo.
 
 ## 5. Seguridad: tu información protegida
 
@@ -163,6 +192,7 @@ El botón **Tema oscuro / Tema claro** cambia los colores y se recuerda en las s
 | Dato | Dónde | Cómo |
 |---|---|---|
 | Correo, nombre y rol | Azure SQL | En la cuenta |
+| Chat de Telegram | Azure SQL | Solo si lo vinculas; puedes desvincularlo cuando quieras |
 | Contraseña | Azure SQL | Solo como huella; no se puede recuperar el texto original |
 | Secreto de la app autenticadora | Azure SQL | Cifrado |
 | Reservas, entradas y citas | Azure SQL | Asociadas a tu cuenta |
@@ -177,7 +207,8 @@ El botón **Tema oscuro / Tema claro** cambia los colores y se recuerda en las s
 - Las sesiones usan tokens firmados que cada servicio verifica; las rutas internas solo aceptan
   servicios autorizados.
 - Los códigos QR de entradas y cobros están firmados: uno alterado se rechaza.
-- Los avisos nunca incluyen contraseñas, códigos ni tokens.
+- Cambiar o restablecer la contraseña cierra las demás sesiones y te avisa por correo y Telegram.
+- Los avisos van solo a la persona afectada y nunca incluyen contraseñas, códigos ni tokens.
 
 ## 6. Agradecimientos
 

@@ -380,12 +380,13 @@ public class PaymentBillingService {
         outbox.setId(outboxEventId);
         outbox.setTipo("pago.aprobado");
         outbox.setCarga(String.format(
-                "{\"orden_id\":\"%s\",\"referencia\":\"%s\",\"origen\":\"%s\",\"monto\":%s,\"numero_factura\":\"%s\"}",
+                "{\"orden_id\":\"%s\",\"referencia\":\"%s\",\"origen\":\"%s\",\"monto\":%s,\"numero_factura\":\"%s\",\"usuario_id\":\"%s\"}",
                 order.getId(),
                 order.getReferencia(),
                 order.getOrigen(),
                 total.toPlainString(),
-                invoiceNumber
+                invoiceNumber,
+                order.getUsuarioId()
         ));
         outbox.setCorrelacionId(correlationId);
         outbox.setCreadoEn(now);
@@ -455,11 +456,12 @@ public class PaymentBillingService {
         outbox.setId(outboxId);
         outbox.setTipo("pago.reembolsado");
         outbox.setCarga(String.format(
-                "{\"orden_id\":\"%s\",\"referencia\":\"%s\",\"origen\":\"%s\",\"monto\":%s}",
+                "{\"orden_id\":\"%s\",\"referencia\":\"%s\",\"origen\":\"%s\",\"monto\":%s,\"usuario_id\":\"%s\"}",
                 order.getId(),
                 order.getReferencia(),
                 order.getOrigen(),
-                scaledAmount.toPlainString()
+                scaledAmount.toPlainString(),
+                order.getUsuarioId()
         ));
         outbox.setCorrelacionId(correlationId);
         outbox.setCreadoEn(now);

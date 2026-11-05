@@ -1,17 +1,19 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.errors import ProblemDetailError
 from app.models.catalog import StandReservation
+from app.models.identity import User
 from app.models.tickets_agenda import Ticket
 from app.schemas.catalog import (
     InternalReservationResponse,
     MarkReservationPaidRequest,
 )
+from app.schemas.identity import ContactInfo
 from app.schemas.tickets_agenda import (
     ActivateTicketInternalRequest,
     TicketResponse,
@@ -195,3 +197,41 @@ def internal_publish_outbox(
     db: Session = Depends(get_db),
 ) -> dict[str, int]:
     return publish_pending_outbox_events(db=db)
+
+
+@router.get("/contactos", response_model=list[ContactInfo])
+def get_contacts(
+    ids: str = "",
+    correos: str = "",
+    roles: str = "",
+    _: dict[str, Any] = Depends(require_service_token),
+    db: Session = Depends(get_db),
+) -> list[ContactInfo]:
+    """Datos de contacto para los avisos, leídos de la base en el momento de enviar.
+
+    Acepta identificadores, correos o roles separados por comas (máximo 50 de cada uno) y solo
+    devuelve cuentas activas.
+    """
+    def lista(valor: str) -> list[str]:
+        return [v.strip() for v in valor.split(",") if v.strip()][:50]
+
+    filtros = []
+    if lista(ids):
+        filtros.append(User.id.in_(lista(ids)))
+    if lista(correos):
+        filtros.append(User.correo.in_([c.lower() for c in lista(correos)]))
+    if lista(roles):
+        filtros.append(User.rol.in_(lista(roles)))
+    if not filtros:
+        return []
+    usuarios = db.scalars(select(User).where(User.activo == True, or_(*filtros)))  # noqa: E712
+    return [
+        ContactInfo(
+            usuario_id=u.id,
+            correo=u.correo,
+            nombre=u.nombre,
+            rol=u.rol,
+            telegram_chat_id=u.telegram_chat_id,
+        )
+        for u in usuarios
+    ]

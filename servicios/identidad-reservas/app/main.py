@@ -22,6 +22,7 @@ from app.routers import (
     profile,
     reservations,
     session,
+    telegram,
     tickets_agenda,
 )
 from app.services.outbox_publisher import publish_after_write
@@ -80,6 +81,7 @@ def create_app(init_local_db: bool = True) -> FastAPI:
     app.include_router(tickets_agenda.router)
     app.include_router(images.router)
     app.include_router(internal.router)
+    app.include_router(telegram.router)
 
     return app
 

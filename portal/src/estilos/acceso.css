@@ -285,6 +285,258 @@
   to { transform: translate3d(-12px, 10px, 0) scale(1.04); }
 }
 
+/* ---- Plano animado del pabellón (motivo del proyecto) -------------------- */
+.plano-animado {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 400px);
+  margin: var(--esp-8) 0 var(--esp-2);
+  animation: login-content-enter 0.7s ease-out 0.55s both;
+}
+
+.plano-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.plano-recinto {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1.2;
+}
+
+.plano-pasillo {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.plano-stand {
+  --stand: #ff8a80;
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1;
+  animation: stand-reserva 7.2s ease-in-out infinite;
+}
+
+.plano-sql { --stand: #ff8a80; }
+.plano-ora { --stand: #f4a090; }
+.plano-mdb { --stand: #00ed64; }
+
+.plano-ruta {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 6;
+  animation: ruta-avanza 1.6s linear infinite;
+}
+
+.plano-visitante {
+  fill: #ffffff;
+  stroke: #ff8a80;
+  stroke-width: 2.5;
+}
+
+.plano-visitante-eco {
+  fill: rgba(255, 138, 128, 0.25);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: eco-visitante 1.8s ease-out infinite;
+}
+
+.qr-validacion {
+  position: absolute;
+  right: -6px;
+  bottom: -18px;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-2) var(--esp-4) var(--esp-2) var(--esp-2);
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #c3cad6;
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid rgba(0, 237, 100, 0.35);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  animation: qr-aparece 9s ease-in-out 1s infinite both;
+}
+
+.qr-mini {
+  width: 38px;
+  height: 38px;
+  padding: 4px;
+  background: #ffffff;
+  border-radius: 6px;
+}
+
+.qr-ancla,
+.qr-modulos { fill: #111827; }
+.qr-centro { fill: #ffffff; }
+
+.qr-linea {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 38px;
+  height: 2px;
+  background: #00ed64;
+  box-shadow: 0 0 8px #00ed64;
+  animation: qr-escanea 1.2s ease-in-out infinite alternate;
+}
+
+.qr-estado {
+  display: grid;
+}
+
+.qr-estado strong {
+  font-size: 0.8rem;
+  color: #00ed64;
+}
+
+@keyframes stand-reserva {
+  0%, 8% { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.18); }
+  16%, 70% {
+    fill: color-mix(in srgb, var(--stand) 30%, transparent);
+    stroke: var(--stand);
+  }
+  85%, 100% { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.18); }
+}
+
+@keyframes ruta-avanza {
+  to { stroke-dashoffset: -18; }
+}
+
+@keyframes eco-visitante {
+  from { opacity: 0.9; transform: scale(0.6); }
+  to { opacity: 0; transform: scale(1.8); }
+}
+
+@keyframes qr-escanea {
+  from { transform: translateY(0); }
+  to { transform: translateY(36px); }
+}
+
+@keyframes qr-aparece {
+  0%, 62% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  70%, 94% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+/* ---- Elementos del formulario de acceso --------------------------------- */
+.login-fila-ayuda {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  margin: calc(var(--esp-2) * -1) 0 var(--esp-5);
+  animation: login-content-enter 0.55s ease-out 0.52s both;
+}
+
+.login-fila-ayuda .login-security-note {
+  margin: 0;
+  animation: none;
+}
+
+.login-olvido {
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.login-separador {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  margin: var(--esp-5) 0;
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.login-separador::before,
+.login-separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.login-llave {
+  width: 100%;
+  min-height: 46px;
+}
+
+.selector-metodo {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 4px;
+  margin-bottom: var(--esp-5);
+  padding: 4px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.selector-metodo button {
+  min-height: 38px;
+  padding: var(--esp-2);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.selector-metodo button:hover {
+  color: var(--text-primary);
+}
+
+.selector-metodo button.activo {
+  color: var(--brand-primary);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-subtle);
+}
+
+.selector-metodo button:focus-visible {
+  outline: none;
+  box-shadow: var(--anillo-foco);
+}
+
+.input-codigo {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  letter-spacing: 0.32em;
+  text-align: center;
+}
+
+.btn-enlace {
+  display: block;
+  margin: var(--esp-3) auto 0;
+  padding: var(--esp-1) var(--esp-2);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--brand-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.btn-enlace:hover {
+  text-decoration: underline;
+}
+
 /* ---- Responsive ---------------------------------------------------------- */
 @media (max-width: 1050px) {
   .login-page {
@@ -329,7 +581,8 @@
     transition: none !important;
   }
 
-  .login-benefits li {
+  .login-benefits li,
+  .qr-validacion {
     opacity: 1;
   }
 }

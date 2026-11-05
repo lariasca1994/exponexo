@@ -6,7 +6,8 @@ from typing import Any
 import httpx
 
 from avisos.correo import assert_no_sensitive_data, render_template, send_brevo_email
-from avisos.telegram import send_telegram_alert
+from avisos.contactos import resolve_contacts
+from avisos.telegram import send_telegram_message, telegram_text
 
 logger = logging.getLogger("exponexo.eventos.avisos")
 logger.setLevel(logging.INFO)
@@ -26,6 +27,95 @@ def _extract_envelope(raw_body: str) -> dict[str, Any]:
     return parsed
 
 
+def _ids(data: dict[str, Any], *keys: str) -> list[str]:
+    return [str(data[k]) for k in keys if data.get(k)]
+
+
+def _aviso(event_type: str, data: dict[str, Any], portal_url: str) -> dict[str, Any] | None:
+    """Qué decir y a quién: ids, correos o roles de las personas afectadas (se resuelven en la BD)."""
+
+    def d(*keys: str) -> str:
+        return next((str(data[k]) for k in keys if data.get(k)), "")
+
+    persona = {"ids": _ids(data, "usuario_id", "usuario"), "correos": [d("correo")] if d("correo") else []}
+
+    if event_type == "cuenta.creada":
+        nombre = d("nombre") or "participante"
+        return {**persona, "asunto": "Te damos la bienvenida a ExpoNexo", "titulo": "Te damos la bienvenida a ExpoNexo",
+                "mensaje": f"Hola {nombre}, tu cuenta en ExpoNexo fue creada. Ya puedes explorar las ferias, reservar "
+                           "stands o adquirir entradas. Vincula tu Telegram desde Mi cuenta para recibir también ahí tus avisos.",
+                "enlace": f"{portal_url}/eventos"}
+    if event_type == "cuenta.contrasena_cambiada":
+        return {**persona, "asunto": "Tu contraseña cambió · ExpoNexo", "titulo": "Tu contraseña cambió",
+                "mensaje": "La contraseña de tu cuenta se cambió y se cerraron tus sesiones en otros dispositivos. "
+                           "Si no fuiste tú, restablécela de inmediato desde «¿Olvidaste tu contraseña?».",
+                "enlace": f"{portal_url}/recuperar"}
+    if event_type == "cuenta.contrasena_restablecida":
+        return {**persona, "asunto": "Contraseña restablecida · ExpoNexo", "titulo": "Restableciste tu contraseña",
+                "mensaje": "Tu contraseña se restableció con el código enviado a tu correo y se cerraron todas tus "
+                           "sesiones. Si no fuiste tú, restablécela de nuevo y revisa la seguridad de tu correo.",
+                "enlace": f"{portal_url}/ingreso"}
+    if event_type == "reserva.creada":
+        return {**persona, "asunto": "Reserva temporal de stand · ExpoNexo", "titulo": "Reserva temporal de stand registrada",
+                "mensaje": f"Registramos tu reserva {d('reserva_id', 'reserva')}. Completa el pago antes de "
+                           f"{d('vence_en')} para confirmar tu stand.",
+                "enlace": f"{portal_url}/reservas"}
+    if event_type == "reserva.vencida":
+        return {**persona, "asunto": "Reserva vencida · ExpoNexo", "titulo": "Tu reserva temporal venció",
+                "mensaje": f"La reserva {d('reserva_id', 'reserva')} venció sin pago y el stand volvió a quedar disponible.",
+                "enlace": f"{portal_url}/eventos"}
+    if event_type == "reserva.pagada":
+        return {**persona, "asunto": "Stand confirmado · ExpoNexo", "titulo": "Stand confirmado en ExpoNexo",
+                "mensaje": f"Tu reserva {d('reserva_id', 'reserva')} quedó pagada y confirmada. Nos vemos en el recinto.",
+                "enlace": f"{portal_url}/reservas"}
+    if event_type == "pago.aprobado":
+        factura = d("numero_factura", "factura")
+        return {**persona, "asunto": f"Factura {factura} · ExpoNexo", "titulo": f"Factura electrónica {factura} disponible",
+                "mensaje": f"Tu pago de la orden {d('orden_id', 'orden')} fue aprobado y se emitió la factura {factura}.",
+                "enlace": f"{portal_url}/facturas"}
+    if event_type == "pago.rechazado":
+        return {**persona, "asunto": "Aviso sobre tu orden de pago · ExpoNexo", "titulo": "Tu intento de pago no se completó",
+                "mensaje": f"La orden {d('orden_id', 'orden')} registró un intento rechazado "
+                           f"({d('motivo') or 'transacción rechazada'}). Puedes intentarlo de nuevo desde el portal.",
+                "enlace": f"{portal_url}/facturas"}
+    if event_type == "pago.reembolsado":
+        return {**persona, "asunto": "Reembolso registrado · ExpoNexo", "titulo": "Reembolso registrado",
+                "mensaje": f"Se procesó el reembolso de la orden {d('orden_id', 'orden')}. Revisa el estado en tus facturas.",
+                "enlace": f"{portal_url}/facturas"}
+    if event_type == "entrada.activada":
+        return {**persona, "asunto": "Tu entrada QR · ExpoNexo", "titulo": "Tu entrada está activa",
+                "mensaje": f"Tu entrada {d('entrada')} ya está activa. Ábrela en el portal para presentar tu código QR "
+                           "en el ingreso.",
+                "enlace": f"{portal_url}/mis-entradas"}
+    if event_type == "cita.aceptada":
+        participantes = [str(p) for p in (data.get("participantes") or [])]
+        return {"ids": [p for p in participantes if "@" not in p], "correos": [p for p in participantes if "@" in p],
+                "asunto": "Cita de negocios confirmada · ExpoNexo", "titulo": "Cita de negocios confirmada",
+                "mensaje": f"Tu cita quedó programada de {d('inicio')} a {d('fin')} en la sala {d('sala')}.",
+                "enlace": f"{portal_url}/agenda"}
+    if event_type == "ticket.creado":
+        prioridad = d("prioridad").lower()
+        urgente = prioridad in {"alta", "critica"}
+        return {**persona, "roles": ["personal", "administrador"] if urgente else [],
+                "asunto": f"Ticket {d('ticket')} registrado · ExpoNexo", "titulo": f"Ticket {d('ticket')} registrado",
+                "mensaje": f"Se registró el ticket {d('ticket')} con prioridad {prioridad or 'normal'} en "
+                           f"{d('ubicacion') or 'el recinto'}.",
+                "enlace": f"{portal_url}/soporte/tickets"}
+    if event_type == "ticket.sla_vencido":
+        return {"ids": _ids(data, "usuario_id", "asignado_id"), "roles": ["administrador"],
+                "asunto": f"SLA vencido en el ticket {d('ticket')} · ExpoNexo", "titulo": "Tiempo de atención vencido",
+                "mensaje": f"El ticket {d('ticket')} superó su tiempo de atención y se escaló al nivel "
+                           f"{d('nivel') or 'siguiente'}.",
+                "enlace": f"{portal_url}/soporte/tickets"}
+    if event_type == "dispositivo.caido":
+        return {"roles": ["personal", "administrador"],
+                "asunto": f"Dispositivo sin reporte: {d('dispositivo')} · ExpoNexo", "titulo": "Dispositivo sin reporte",
+                "mensaje": f"El dispositivo {d('dispositivo')} dejó de reportar en {d('ubicacion') or 'el recinto'}; "
+                           f"se abrió el ticket {d('ticket')}.",
+                "enlace": f"{portal_url}/soporte/dispositivos"}
+    return None
+
+
 def process_notification_envelope(
     envelope: dict[str, Any],
     http_client: httpx.Client | None = None,
@@ -43,148 +133,39 @@ def process_notification_envelope(
 
     portal_url = os.getenv("PORTAL_URL", "http://localhost:5173").rstrip("/")
     result: dict[str, Any] = {"estado": "procesado", "evento_id": event_id, "tipo": event_type}
-
-    if event_type == "cuenta.creada":
-        email = str(data.get("correo", "expositor@exponexo.co"))
-        name = str(data.get("nombre", "Participante"))
-        html_body, txt_body = render_template(
-            title="Te damos la bienvenida a ExpoNexo",
-            message=f"Hola {name}, tu cuenta en ExpoNexo fue creada exitosamente. Ya puedes explorar el catálogo de ferias, reservar stands o adquirir entradas.",
-            portal_link=f"{portal_url}/eventos",
-        )
-        send_brevo_email(email, name, "Te damos la bienvenida a ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "reserva.creada":
-        email = str(data.get("correo", "expositor@exponexo.co"))
-        reserva_id = str(data.get("reserva", ""))
-        vence_en = str(data.get("vence_en", ""))
-        html_body, txt_body = render_template(
-            title="Reserva temporal de stand registrada",
-            message=f"Registramos tu reserva {reserva_id}. Recuerda completar el pago antes de {vence_en} para confirmar tu stand.",
-            portal_link=f"{portal_url}/mis-reservas",
-        )
-        send_brevo_email(email, "Expositor", "Reserva temporal de stand · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "reserva.vencida":
-        email = str(data.get("correo", "expositor@exponexo.co"))
-        reserva_id = str(data.get("reserva", ""))
-        html_body, txt_body = render_template(
-            title="Tu reserva temporal venció",
-            message=f"La reserva {reserva_id} expiró sin pago registrado y el stand volvió a estar disponible.",
-            portal_link=f"{portal_url}/eventos",
-        )
-        send_brevo_email(email, "Expositor", "Reserva vencida · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "reserva.pagada":
-        email = str(data.get("correo", "expositor@exponexo.co"))
-        reserva_id = str(data.get("reserva", ""))
-        html_body, txt_body = render_template(
-            title="Stand confirmado en ExpoNexo",
-            message=f"Tu reserva {reserva_id} quedó confirmada y pagada. Nos vemos en el recinto ferial.",
-            portal_link=f"{portal_url}/mis-reservas",
-        )
-        send_brevo_email(email, "Expositor", "Stand confirmado · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "pago.aprobado":
-        email = str(data.get("correo", "comprador@exponexo.co"))
-        factura = str(data.get("factura", ""))
-        orden = str(data.get("orden", ""))
-        html_body, txt_body = render_template(
-            title=f"Factura electrónica {factura} disponible",
-            message=f"Tu pago de la orden {orden} fue aprobado y se emitió la factura {factura}. Puedes consultarla en tu portal.",
-            portal_link=f"{portal_url}/mis-facturas",
-        )
-        send_brevo_email(email, "Comprador", f"Factura {factura} · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "pago.rechazado":
-        email = str(data.get("correo", "comprador@exponexo.co"))
-        orden = str(data.get("orden", ""))
-        motivo = str(data.get("motivo", "Transacción rechazada"))
-        html_body, txt_body = render_template(
-            title="Tu intento de pago no pudo completarse",
-            message=f"La orden {orden} registró un intento rechazado ({motivo}). Puedes generar un nuevo intento desde el portal.",
-            portal_link=f"{portal_url}/pagos/orden/{orden}",
-        )
-        send_brevo_email(email, "Comprador", "Aviso sobre tu orden de pago · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "pago.reembolsado":
-        email = str(data.get("correo", "comprador@exponexo.co"))
-        orden = str(data.get("orden", ""))
-        html_body, txt_body = render_template(
-            title="Reembolso registrado en ExpoNexo",
-            message=f"Se procesó el reembolso asociado a la orden {orden}. Puedes revisar el estado actualizado en tus facturas.",
-            portal_link=f"{portal_url}/mis-facturas",
-        )
-        send_brevo_email(email, "Comprador", "Reembolso registrado · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "entrada.activada":
-        email = str(data.get("correo", "visitante@exponexo.co"))
-        entrada_id = str(data.get("entrada", ""))
-        html_body, txt_body = render_template(
-            title="Tu entrada para ExpoNexo está activa",
-            message=f"Tu entrada {entrada_id} ya está activa. Ábrela desde el portal para presentar tu código QR firmado en el ingreso.",
-            portal_link=f"{portal_url}/mis-entradas",
-        )
-        send_brevo_email(email, "Visitante", "Tu entrada QR · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "cita.aceptada":
-        participantes = data.get("participantes") or ["participante@exponexo.co"]
-        cita_id = str(data.get("cita", ""))
-        inicio = str(data.get("inicio", ""))
-        fin = str(data.get("fin", ""))
-        html_body, txt_body = render_template(
-            title="Cita de negocios confirmada",
-            message=f"La cita {cita_id} quedó programada de {inicio} a {fin}. Consulta la sala asignada en tu agenda.",
-            portal_link=f"{portal_url}/agenda",
-        )
-        for addr in participantes:
-            email_addr = str(addr) if "@" in str(addr) else f"{addr}@exponexo.co"
-            send_brevo_email(email_addr, "Participante", "Cita de negocios confirmada · ExpoNexo", html_body, txt_body, http_client)
-        result["canal"] = "correo"
-
-    elif event_type == "ticket.creado":
-        prioridad = str(data.get("prioridad", "")).lower()
-        if prioridad in {"alta", "critica"}:
-            ticket_id = str(data.get("ticket", ""))
-            ubicacion = str(data.get("ubicacion", "Recinto"))
-            send_telegram_alert(
-                f"[ExpoNexo · Prioridad {prioridad.upper()}] Nuevo ticket {ticket_id} en {ubicacion}.",
-                http_client=http_client,
-            )
-            result["canal"] = "telegram"
-        else:
-            result["canal"] = "ninguno_prioridad_baja"
-
-    elif event_type == "ticket.sla_vencido":
-        ticket_id = str(data.get("ticket", ""))
-        nivel = str(data.get("nivel", "1"))
-        send_telegram_alert(
-            f"[ExpoNexo · SLA VENCIDO] El ticket {ticket_id} superó el acuerdo de atención (escalamiento nivel {nivel}).",
-            http_client=http_client,
-        )
-        result["canal"] = "telegram"
-
-    elif event_type == "dispositivo.caido":
-        dispositivo = str(data.get("dispositivo", ""))
-        ubicacion = str(data.get("ubicacion", "Recinto"))
-        ticket_id = str(data.get("ticket", ""))
-        send_telegram_alert(
-            f"[ExpoNexo · DISPOSITIVO CAÍDO] Kiosco/pantalla {dispositivo} sin reporte en {ubicacion} (ticket {ticket_id}).",
-            http_client=http_client,
-        )
-        result["canal"] = "telegram"
-
-    else:
+    aviso = _aviso(event_type, data, portal_url)
+    if aviso is None:
         result["canal"] = "ignorado"
+        _PROCESSED_EVENT_IDS.add(event_id)
+        return result
 
+    # Si la base no responde se lanza: SQS reintenta el mensaje y, tras 5 intentos, va a la DLQ
+    contactos = resolve_contacts(aviso.get("ids"), aviso.get("correos"), aviso.get("roles"), http_client)
+    html_body, txt_body = render_template(title=aviso["titulo"], message=aviso["mensaje"], portal_link=aviso["enlace"])
+    texto_telegram = telegram_text(aviso["titulo"], aviso["mensaje"], aviso["enlace"])
+    enviados = {"correo": 0, "telegram": 0}
+    for contacto in contactos:
+        # Correo y Telegram por separado: si uno falla, el otro sale igual
+        try:
+            send_brevo_email(contacto["correo"], contacto.get("nombre") or "", aviso["asunto"], html_body, txt_body,
+                             http_client)
+            enviados["correo"] += 1
+        except Exception as exc:
+            logger.error("Correo del aviso %s no enviado: %s", event_type, type(exc).__name__)
+        if contacto.get("telegram_chat_id"):
+            try:
+                send_telegram_message(str(contacto["telegram_chat_id"]), texto_telegram, http_client)
+                enviados["telegram"] += 1
+            except Exception as exc:
+                logger.error("Telegram del aviso %s no enviado: %s", event_type, type(exc).__name__)
+
+    if enviados["telegram"]:
+        result["canal"] = "correo+telegram"
+    elif enviados["correo"]:
+        result["canal"] = "correo"
+    else:
+        result["canal"] = "sin_destinatarios"
+    result["enviados"] = enviados
     _PROCESSED_EVENT_IDS.add(event_id)
     return result
 

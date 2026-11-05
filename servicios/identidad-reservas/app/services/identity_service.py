@@ -25,6 +25,7 @@ from app.schemas.identity import (
     RegisterAccountRequest,
     SecurityProfileResponse,
     SessionInfo,
+    TelegramLinkResponse,
     TokenPairResponse,
     TotpSetupResponse,
 )
@@ -646,6 +647,7 @@ def get_security_profile(db: Session, user: User) -> SecurityProfileResponse:
     ]
     return SecurityProfileResponse(
         usuario=AccountResponse.model_validate(user),
+        telegram_vinculado=bool(user.telegram_chat_id),
         metodos_mfa=[
             MfaFactorInfo(
                 tipo=f.tipo,
@@ -676,3 +678,136 @@ def get_security_profile(db: Session, user: User) -> SecurityProfileResponse:
             for s in active_sessions
         ],
     )
+
+
+def revoke_all_sessions(db: Session, user: User, keep_refresh_token: str | None = None) -> int:
+    """Cierra las sesiones abiertas de la persona, salvo la indicada (la del dispositivo actual)."""
+    keep_fp = hash_fingerprint(keep_refresh_token) if keep_refresh_token else None
+    now = datetime.now(timezone.utc)
+    closed = 0
+    for session_row in db.scalars(
+        select(UserSession).where(UserSession.usuario_id == user.id, UserSession.revocada_en.is_(None))
+    ):
+        if keep_fp and session_row.huella_token == keep_fp:
+            continue
+        session_row.revocada_en = now
+        closed += 1
+    return closed
+
+
+def _notify_password_event(db: Session, user: User, event_type: str, detail: str) -> None:
+    """Aviso por correo y Telegram a la propia persona (lo envía la función de avisos)."""
+    _record_outbox_event(
+        db=db,
+        event_type=event_type,
+        payload_data={"usuario_id": user.id, "correo": user.correo, "nombre": user.nombre},
+    )
+    _record_audit(db=db, user_id=user.id, action=event_type, entity="usuarios", entity_id=user.id, detail=detail)
+
+
+def change_password(
+    db: Session,
+    user: User,
+    current_password: str,
+    new_password: str,
+    keep_refresh_token: str | None = None,
+) -> int:
+    if not verify_password(user.hash_contrasena, current_password):
+        raise ProblemDetailError(
+            status=400,
+            title="Contraseña actual incorrecta",
+            detail="La contraseña actual no coincide.",
+            problem_type="https://exponexo.co/problemas/contrasena-actual-incorrecta",
+        )
+    strength_error = validate_password_strength(new_password)
+    if strength_error:
+        raise ProblemDetailError(
+            status=422,
+            title="Contraseña débil",
+            detail=strength_error,
+            problem_type="https://exponexo.co/problemas/contrasena-debil",
+        )
+    if verify_password(user.hash_contrasena, new_password):
+        raise ProblemDetailError(
+            status=422,
+            title="Contraseña repetida",
+            detail="La nueva contraseña debe ser distinta de la actual.",
+            problem_type="https://exponexo.co/problemas/contrasena-repetida",
+        )
+    user.hash_contrasena = hash_password(new_password)
+    closed = revoke_all_sessions(db, user, keep_refresh_token)
+    _notify_password_event(db, user, "cuenta.contrasena_cambiada", f"Cambio de contraseña; {closed} sesiones cerradas")
+    db.commit()
+    return closed
+
+
+def complete_password_reset(db: Session, user: User, new_password: str) -> None:
+    """Tras un restablecimiento: nueva huella, todas las sesiones cerradas y bloqueo levantado."""
+    user.hash_contrasena = hash_password(new_password)
+    revoke_all_sessions(db, user)
+    for attempt in db.scalars(
+        select(LoginAttempt).where(
+            LoginAttempt.correo_huella == hash_fingerprint(user.correo.lower()),
+            LoginAttempt.exito == False,  # noqa: E712
+        )
+    ):
+        db.delete(attempt)
+    _notify_password_event(db, user, "cuenta.contrasena_restablecida", "Restablecimiento con código por correo")
+
+
+TELEGRAM_LINK_MINUTES = 15
+
+
+def start_telegram_link(db: Session, user: User) -> TelegramLinkResponse:
+    from app.services.telegram_bot import bot_username
+
+    username = bot_username()
+    if not username:
+        raise ProblemDetailError(
+            status=503,
+            title="Telegram no disponible",
+            detail="El bot de avisos no está disponible en este momento. Intenta más tarde.",
+            problem_type="https://exponexo.co/problemas/telegram-no-disponible",
+        )
+    raw = secrets.token_urlsafe(24)
+    db.add(
+        VerificationCode(
+            usuario_id=user.id,
+            proposito="telegram",
+            huella=hash_fingerprint(raw),
+            vence_en=datetime.now(timezone.utc) + timedelta(minutes=TELEGRAM_LINK_MINUTES),
+        )
+    )
+    db.commit()
+    return TelegramLinkResponse(enlace=f"https://t.me/{username}?start={raw}", vence_en_segundos=TELEGRAM_LINK_MINUTES * 60)
+
+
+def link_telegram_chat(db: Session, raw_token: str, chat_id: str) -> User | None:
+    """Usa el código de un solo uso que llegó en «/start <código>» y guarda el chat de la persona."""
+    now = datetime.now(timezone.utc)
+    code = db.scalar(
+        select(VerificationCode).where(
+            VerificationCode.proposito == "telegram",
+            VerificationCode.huella == hash_fingerprint(raw_token),
+            VerificationCode.usado_en.is_(None),
+        )
+    )
+    if code is None or _ensure_utc(code.vence_en) < now:
+        return None
+    code.usado_en = now
+    user = db.scalar(select(User).where(User.id == code.usuario_id))
+    if user is None or not user.activo:
+        db.commit()
+        return None
+    user.telegram_chat_id = chat_id
+    _record_audit(db=db, user_id=user.id, action="telegram.vinculado", entity="usuarios", entity_id=user.id)
+    db.commit()
+    return user
+
+
+def unlink_telegram(db: Session, user: User) -> SecurityProfileResponse:
+    user.telegram_chat_id = None
+    _record_audit(db=db, user_id=user.id, action="telegram.desvinculado", entity="usuarios", entity_id=user.id)
+    db.commit()
+    db.refresh(user)
+    return get_security_profile(db=db, user=user)

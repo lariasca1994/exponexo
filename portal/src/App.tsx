@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { identityApi } from "./api/clienteIdentidad";
 import { Ingreso } from "./paginas/acceso/Ingreso";
 import { Portada } from "./paginas/acceso/Portada";
+import { Recuperar } from "./paginas/acceso/Recuperar";
 import { Registro } from "./paginas/acceso/Registro";
 import { SegundoPaso } from "./paginas/acceso/SegundoPaso";
 import { AdminCatalogo } from "./paginas/admin/AdminCatalogo";
@@ -15,7 +16,7 @@ import { PlanoStands } from "./paginas/eventos/PlanoStands";
 import { Inicio } from "./paginas/inicio/Inicio";
 import { MisFacturas } from "./paginas/pagos/MisFacturas";
 import { PagarOrden } from "./paginas/pagos/PagarOrden";
-import { SeguridadPerfil } from "./paginas/perfil/SeguridadPerfil";
+import { MiCuenta } from "./paginas/perfil/MiCuenta";
 import { MisReservas } from "./paginas/reservas/MisReservas";
 import { MesaAyudaTickets } from "./paginas/soporte/MesaAyudaTickets";
 import { MonitoreoDispositivos } from "./paginas/soporte/MonitoreoDispositivos";
@@ -70,24 +71,24 @@ export function App() {
     <div className="app-shell">
       <header className="topbar">
         <Link to={user ? "/inicio" : "/"} className="brand-title">
-          <img src="/icono.svg" alt="ExpoNexo Logo" width="28" height="28" />
+          <img src="/icono.svg" alt="" width="30" height="30" />
           <span>ExpoNexo</span>
         </Link>
 
-        <nav className="nav-links">
+        <nav className="nav-links" aria-label="Navegación principal">
           <NavLink to="/eventos">Eventos</NavLink>
-          {user ? (
+          {user && (
             <>
               <NavLink to="/inicio">Inicio</NavLink>
-              {user.rol === "expositor" && <NavLink to="/reservas">Mis Reservas</NavLink>}
+              {user.rol === "expositor" && <NavLink to="/reservas">Mis reservas</NavLink>}
               {(user.rol === "visitante" || user.rol === "expositor") && (
                 <>
-                  <NavLink to="/mis-entradas">Mis Entradas</NavLink>
+                  <NavLink to="/mis-entradas">Mis entradas</NavLink>
                   <NavLink to="/agenda">Agenda B2B</NavLink>
                   <NavLink to="/facturas">Facturas</NavLink>
                 </>
               )}
-              <NavLink to="/soporte/tickets">Mesa de Ayuda</NavLink>
+              <NavLink to="/soporte/tickets">Mesa de ayuda</NavLink>
               {(user.rol === "personal" || user.rol === "administrador") && (
                 <>
                   <NavLink to="/puerta/validar-qr">Validar QR</NavLink>
@@ -100,29 +101,53 @@ export function App() {
                   <NavLink to="/admin/catalogo">Catálogo</NavLink>
                 </>
               )}
-              <NavLink to="/perfil/seguridad">Seguridad</NavLink>
-              <span className="badge">
-                {user.nombre} ({user.rol})
-              </span>
-              <button type="button" className="btn btn-secondary" onClick={handleLogout}>
-                Salir
+            </>
+          )}
+        </nav>
+
+        <div className="topbar-acciones">
+          <button
+            type="button"
+            className="boton-icono"
+            onClick={toggleTheme}
+            aria-label={darkTheme ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+            title={darkTheme ? "Tema claro" : "Tema oscuro"}
+          >
+            {darkTheme ? (
+              <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="12" cy="12" r="4.2" />
+                <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z" />
+              </svg>
+            )}
+          </button>
+          {user ? (
+            <>
+              <Link to="/perfil" className="usuario-chip" title="Mi cuenta">
+                <span className="usuario-avatar" aria-hidden="true">
+                  {user.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}
+                </span>
+                <span className="usuario-datos">
+                  <strong>{user.nombre.split(/\s+/)[0]}</strong>
+                  <small>{user.rol}</small>
+                </span>
+              </Link>
+              <button type="button" className="boton-icono" onClick={handleLogout} aria-label="Cerrar sesión" title="Cerrar sesión">
+                <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />
+                </svg>
               </button>
             </>
           ) : (
             <>
-              <NavLink to="/ingreso">Ingresar</NavLink>
-              <NavLink to="/registro">Crear cuenta</NavLink>
+              <Link to="/ingreso" className="boton-topbar boton-topbar-suave">Ingresar</Link>
+              <Link to="/registro" className="boton-topbar boton-topbar-lleno">Crear cuenta</Link>
             </>
           )}
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={toggleTheme}
-            aria-label="Cambiar tema claro u oscuro"
-          >
-            {darkTheme ? "Tema claro" : "Tema oscuro"}
-          </button>
-        </nav>
+        </div>
       </header>
 
       <main>
@@ -132,6 +157,7 @@ export function App() {
           <Route path="/registro" element={<Registro />} />
           <Route path="/ingreso" element={<Ingreso />} />
           <Route path="/segundo-paso" element={<SegundoPaso />} />
+          <Route path="/recuperar" element={<Recuperar />} />
           <Route path="/eventos" element={<ListaEventos />} />
           <Route path="/eventos/:id/stands" element={<PlanoStands />} />
           <Route
@@ -223,13 +249,14 @@ export function App() {
             }
           />
           <Route
-            path="/perfil/seguridad"
+            path="/perfil"
             element={
               <ProtectedRoute>
-                <SeguridadPerfil />
+                <MiCuenta />
               </ProtectedRoute>
             }
           />
+          <Route path="/perfil/seguridad" element={<Navigate to="/perfil" replace />} />
         </Routes>
         )}
       </main>
