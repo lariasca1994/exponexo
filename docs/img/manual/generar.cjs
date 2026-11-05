@@ -34,8 +34,10 @@ async function marcar(pagina, selectores) {
 
 async function captura(navegador, nombre, ruta, { esperar, preparar, completa = false, tema = "light" } = {}) {
   const pagina = await navegador.newPage({ viewport: VISTA, colorScheme: tema });
-  await pagina.goto(BASE + ruta, { waitUntil: "networkidle" });
+  // Los servicios escalan a cero: la primera carga puede esperar a que despierten
+  await pagina.goto(BASE + ruta, { waitUntil: "load", timeout: 150000 });
   if (esperar) await pagina.getByText(esperar).first().waitFor({ timeout: 150000 });
+  await pagina.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
   await pagina.waitForTimeout(1800); // animaciones de entrada
   if (preparar) await preparar(pagina);
   await pagina.screenshot({ path: path.join(CARPETA, `${nombre}.png`), fullPage: completa });
@@ -75,7 +77,7 @@ async function captura(navegador, nombre, ruta, { esperar, preparar, completa = 
     await captura(navegador, "04-eventos", "/eventos", { esperar: "Ver plano de stands", completa: true });
     // El plano del primer evento publicado, con un stand seleccionado
     const pagina = await navegador.newPage({ viewport: VISTA });
-    await pagina.goto(`${BASE}/eventos`, { waitUntil: "networkidle" });
+    await pagina.goto(`${BASE}/eventos`, { waitUntil: "load", timeout: 150000 });
     await pagina.getByText("Ver plano de stands").first().waitFor({ timeout: 150000 });
     const plano = await pagina.getByText("Ver plano de stands").first().getAttribute("href");
     await pagina.close();
