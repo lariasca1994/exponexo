@@ -4,10 +4,10 @@
 // identidad al cargar); sin ellos los tickets quedan sin asignar.
 const asignados = (typeof ASIGNADOS !== 'undefined' && ASIGNADOS.length) ? ASIGNADOS : [null];
 const ahora = new Date();
-// Misma definición que crea mesa de ayuda: series de tiempo con retención de 30 días
+// Misma definición que crea mesa de ayuda: series de tiempo con retención de 15 días
 if (!db.getCollectionNames().includes('lecturas_dispositivo')) {
   db.createCollection('lecturas_dispositivo', { timeseries: { timeField: 'momento', metaField: 'dispositivo_id',
-    granularity: 'seconds' }, expireAfterSeconds: 30 * 24 * 3600 });
+    granularity: 'seconds' }, expireAfterSeconds: 15 * 24 * 3600 });
 }
 let cambios = 0;
 

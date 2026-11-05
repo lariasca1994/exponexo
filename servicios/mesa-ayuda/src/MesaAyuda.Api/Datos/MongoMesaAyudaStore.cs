@@ -27,7 +27,7 @@ public sealed class MongoMesaAyudaStore : IMesaAyudaStore
         _devices = _db.GetCollection<DeviceDocument>("dispositivos");
         _readings = _db.GetCollection<DeviceReadingDocument>("lecturas_dispositivo");
         _outbox = _db.GetCollection<OutboxDocument>("bandeja_salida");
-        _retentionDays = options.LecturaRetencionDias > 0 ? options.LecturaRetencionDias : 30;
+        _retentionDays = options.LecturaRetencionDias > 0 ? options.LecturaRetencionDias : 15;
     }
 
     private async Task EnsureIndexesAndPoliciesAsync(CancellationToken ct)

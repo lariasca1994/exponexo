@@ -13,7 +13,7 @@ public sealed class MesaAyudaOptions
     public string JwtJwksUrl { get; set; } = "http://localhost:8001/.well-known/jwks.json";
     public string DispositivoCodigoEnrolamiento { get; set; } = DevelopmentEnrollmentCode;
     public int DispositivoSinReporteMinutos { get; set; } = 5;
-    public int LecturaRetencionDias { get; set; } = 30;
+    public int LecturaRetencionDias { get; set; } = 15;
     public string InternoSecreto { get; set; } = DevelopmentInternalSecret;
     public string SnsTemaEventosArn { get; set; } = string.Empty;
 

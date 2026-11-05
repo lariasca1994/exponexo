@@ -1,12 +1,15 @@
 name: Depuración quincenal
 
-# Cada 15 días (días 1 y 16 de cada mes) borra lo que se acumula con los despliegues, para no
-# salir de las capas gratuitas:
-#   - imágenes viejas en GitHub Container Registry: se conservan las 5 más recientes de cada
-#     servicio (la que está en producción y las anteriores para volver atrás);
-#   - cachés de GitHub Actions y ejecuciones de workflows con más de 15 días.
-# Artifact Registry (pagos) se limpia solo con su política de limpieza; los logs de Lambda vencen
-# a los 14 días. Corre con el token del propio repositorio: no necesita secretos.
+# Cada 15 días (días 1 y 16 de cada mes) borra lo que se acumula y podría llenar los planes
+# gratuitos (regla del portafolio):
+#   - GitHub: imágenes viejas en GHCR (se conservan las 5 más recientes de cada servicio) y
+#     cachés, artefactos y ejecuciones con más de 15 días;
+#   - bases de datos: eventos de seguridad, códigos y sesiones vencidas, bandejas de salida ya
+#     publicadas y eventos ya procesados con más de 15 días; lecturas de dispositivos a 15 días;
+#   - Artifact Registry (pagos) se limpia solo con su política y los logs de Lambda vencen a los
+#     14 días.
+# Despierta cada base solo para esto, dos veces al mes. Nunca toca cuentas, reservas, entradas,
+# citas, pagos, facturas ni tickets.
 on:
   schedule:
     - cron: '0 6 1,16 * *'
@@ -18,7 +21,8 @@ permissions:
   actions: write
 
 jobs:
-  depurar:
+  github:
+    name: Imágenes, cachés, artefactos y ejecuciones
     runs-on: ubuntu-latest
     steps:
       - name: Imágenes viejas de identidad-reservas (se conservan las 5 más recientes)
@@ -35,20 +39,92 @@ jobs:
           package-type: container
           min-versions-to-keep: 5
 
-      - name: Cachés y ejecuciones con más de 15 días
+      - name: Cachés, artefactos y ejecuciones con más de 15 días
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           limite=$(date -u -d '15 days ago' +%s)
+          viejo() { [ "$(date -u -d "$1" +%s)" -lt "$limite" ]; }
           gh api --paginate "repos/${{ github.repository }}/actions/caches?per_page=100" \
             --jq '.actions_caches[] | "\(.id) \(.last_accessed_at)"' | while read -r id fecha; do
-            if [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
-              gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" > /dev/null && echo "caché $id borrada"
-            fi
+            viejo "$fecha" && gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" > /dev/null && echo "caché $id borrada"
+          done
+          gh api --paginate "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | "\(.id) \(.created_at)"' | while read -r id fecha; do
+            viejo "$fecha" && gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" > /dev/null && echo "artefacto $id borrado"
           done
           gh api --paginate "repos/${{ github.repository }}/actions/runs?per_page=100" \
             --jq '.workflow_runs[] | select(.status == "completed") | "\(.id) \(.created_at)"' | while read -r id fecha; do
-            if [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
-              gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$id" > /dev/null && echo "ejecución $id borrada"
-            fi
+            viejo "$fecha" && gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$id" > /dev/null && echo "ejecución $id borrada"
           done
+          true
+
+  bases:
+    name: Datos operativos con más de 15 días
+    runs-on: ubuntu-latest
+    environment: produccion
+    env:
+      VERSION_ORACLE_JDBC: 23.26.3.0.0
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+
+      - name: Herramientas (driver ODBC 18, Oracle JDBC y mongosh)
+        run: |
+          if ! ls /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18*.so* >/dev/null 2>&1; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft-prod.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" \
+              | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
+            sudo apt-get update -q && sudo ACCEPT_EULA=Y apt-get install -y -q msodbcsql18 unixodbc-dev
+          fi
+          python -m pip install -q -r servicios/identidad-reservas/requirements.txt
+          mkdir -p "$RUNNER_TEMP/jdbc"
+          for a in jdbc/ojdbc11 security/oraclepki; do
+            n=${a#*/}
+            curl -fsSL -o "$RUNNER_TEMP/jdbc/$n.jar" \
+              "https://repo1.maven.org/maven2/com/oracle/database/$a/$VERSION_ORACLE_JDBC/$n-$VERSION_ORACLE_JDBC.jar"
+          done
+          npm install -g --silent mongosh
+
+      - name: Identidad (Azure SQL)
+        working-directory: servicios/identidad-reservas
+        env:
+          APP_ENTORNO: migracion
+          SQLSERVER_SERVIDOR: ${{ secrets.SQLSERVER_SERVIDOR }}
+          SQLSERVER_BASE: ${{ secrets.SQLSERVER_BASE }}
+          SQLSERVER_USUARIO: ${{ secrets.SQLSERVER_USUARIO }}
+          SQLSERVER_CONTRASENA: ${{ secrets.SQLSERVER_CONTRASENA }}
+          SQLSERVER_DRIVER_ODBC: ODBC Driver 18 for SQL Server
+        run: |
+          # La base puede estar pausada: el primer intento la despierta
+          for intento in 1 2 3; do python -m app.services.depuracion && exit 0; sleep 30; done; exit 1
+
+      - name: Pagos (Oracle)
+        if: always()
+        env:
+          ORACLE_TNS_ALIAS: ${{ secrets.ORACLE_TNS_ALIAS }}
+          ORACLE_USUARIO: ${{ secrets.ORACLE_USUARIO }}
+          ORACLE_CONTRASENA: ${{ secrets.ORACLE_CONTRASENA }}
+          ORACLE_WALLET_ZIP_BASE64: ${{ secrets.ORACLE_WALLET_ZIP_BASE64 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/wallet" && echo "$ORACLE_WALLET_ZIP_BASE64" | base64 -d > "$RUNNER_TEMP/wallet.zip"
+          unzip -q -o "$RUNNER_TEMP/wallet.zip" -d "$RUNNER_TEMP/wallet" && rm "$RUNNER_TEMP/wallet.zip"
+          java -cp "$RUNNER_TEMP/jdbc/ojdbc11.jar:$RUNNER_TEMP/jdbc/oraclepki.jar" datos-demo/CargarOracle.java \
+            "jdbc:oracle:thin:@$ORACLE_TNS_ALIAS?TNS_ADMIN=$RUNNER_TEMP/wallet" "$ORACLE_USUARIO" infra/depuracion/pagos.sql
+          rm -rf "$RUNNER_TEMP/wallet"
+
+      - name: Mesa de ayuda (MongoDB Atlas)
+        if: always()
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_BASE: ${{ secrets.MONGO_BASE }}
+        run: |
+          mongosh "$MONGO_URI" --quiet --eval "db = db.getSiblingDB('$MONGO_BASE')" --file infra/depuracion/mesa-ayuda.js

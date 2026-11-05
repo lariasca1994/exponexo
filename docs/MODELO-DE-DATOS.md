@@ -57,7 +57,7 @@ Campos en `snake_case` (los mismos nombres del JSON de la API) y fechas como fec
 | `tickets` | Ticket con su historial embebido, prioridad y SLA; número único |
 | `politicas_sla` | Tiempos de atención por prioridad |
 | `dispositivos` | Dispositivos del recinto con código único y último reporte |
-| `lecturas_dispositivo` | Lecturas de alto volumen; se borran solas tras `LECTURA_RETENCION_DIAS` (índice TTL) |
+| `lecturas_dispositivo` | Lecturas de alto volumen; se borran solas a los 15 días (`LECTURA_RETENCION_DIAS`) |
 | `bandeja_salida` | Eventos por publicar |
 
 *Estudia: «database per service», «transactional outbox», «SQL Server filtered index», «Oracle
