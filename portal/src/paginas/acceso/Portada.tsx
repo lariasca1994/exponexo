@@ -12,19 +12,19 @@ const portada = (slug: string) =>
 
 const PROXIMOS_EVENTOS = [
   {
-    nombre: "ExpoNexo Innovación 2026",
+    nombre: "Feria de Innovación 2026",
     slug: "exponexo-innovacion-2026",
     fechas: "24 – 27 nov 2026",
     resumen: "Feria de innovación, tecnología y negocios.",
   },
   {
-    nombre: "ExpoNexo Manufactura 2027",
+    nombre: "Feria de Manufactura 2027",
     slug: "exponexo-manufactura-2027",
     fechas: "9 – 12 mar 2027",
     resumen: "Manufactura, automatización e industria 4.0.",
   },
   {
-    nombre: "ExpoNexo Agroindustria 2027",
+    nombre: "Feria de Agroindustria 2027",
     slug: "exponexo-agroindustria-2027",
     fechas: "15 – 18 jun 2027",
     resumen: "Agroindustria, sostenibilidad y cadena de suministro.",
@@ -128,7 +128,7 @@ export function Portada() {
       </section>
 
       <section className="container portada-seccion portada-cierre">
-        <h2>¿Primera vez en ExpoNexo?</h2>
+        <h2>¿Primera vez en la plataforma?</h2>
         <p>Crea tu cuenta de visitante o expositor; el ingreso se protege con verificación en dos pasos.</p>
         <Link to="/registro" className="btn btn-primary">
           Crear cuenta

@@ -72,7 +72,7 @@ export function App() {
       <header className="topbar">
         <Link to={user ? "/inicio" : "/"} className="brand-title">
           <img src="/icono.svg" alt="" width="30" height="30" />
-          <span>ExpoNexo</span>
+          <span>Ferias y eventos</span>
         </Link>
 
         <nav className="nav-links" aria-label="Navegación principal">
@@ -261,7 +261,7 @@ export function App() {
         )}
       </main>
       <footer className="pie-pagina">
-        ExpoNexo — proyecto de portafolio de Luis Felipe Arias.
+        Plataforma de ferias y eventos — proyecto de portafolio de Luis Felipe Arias.
       </footer>
     </div>
   );

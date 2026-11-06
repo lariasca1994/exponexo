@@ -48,13 +48,13 @@ export function ListaEventos() {
               {ev.imagen_url ? (
                 <img src={ev.imagen_url} alt={`Portada de ${ev.nombre}`} loading="lazy" width={1200} height={630} />
               ) : (
-                <span aria-hidden="true">{ev.nombre.replace("ExpoNexo ", "")}</span>
+                <span aria-hidden="true">{ev.nombre.replace(/^ExpoNexo\s+/i, "")}</span>
               )}
             </div>
             <div className="tarjeta-evento__cuerpo">
               <span className="badge badge-success">{ev.estado}</span>
-              <h3>{ev.nombre}</h3>
-              <p className="texto-tenue">{ev.descripcion || "Feria oficial en el recinto ExpoNexo."}</p>
+              <h3>{ev.nombre.replace(/^ExpoNexo\s+/i, "")}</h3>
+              <p className="texto-tenue">{ev.descripcion || "Feria oficial en el recinto ferial."}</p>
               <dl className="tarjeta-evento__datos">
                 <div>
                   <dt>Fechas</dt>

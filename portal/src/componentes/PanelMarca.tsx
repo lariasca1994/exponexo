@@ -41,7 +41,7 @@ function useMovimiento(): boolean {
 export function PanelMarca({
   eyebrow = "Ferias que conectan",
   titulo = "Todo tu evento, en un solo lugar.",
-  texto = "ExpoNexo reúne a quienes organizan, exponen y visitan para que cada encuentro cuente."
+  texto = "La plataforma reúne a quienes organizan, exponen y visitan para que cada encuentro cuente."
 }: Props) {
   const movimiento = useMovimiento();
   return (

@@ -192,7 +192,7 @@ export function MiCuenta() {
             </div>
           ) : enlaceTelegram ? (
             <div className="cuenta-pasos">
-              <p>Se abrió el bot de ExpoNexo. Pulsa <strong>Iniciar</strong> en Telegram y luego vuelve aquí.</p>
+              <p>Se abrió el bot de avisos. Pulsa <strong>Iniciar</strong> en Telegram y luego vuelve aquí.</p>
               <div className="cuenta-acciones">
                 <a className="btn btn-secondary" href={enlaceTelegram} target="_blank" rel="noopener noreferrer">Abrir Telegram otra vez</a>
                 <button type="button" className="btn btn-primary" onClick={() => ejecutar(async () => { await cargar(); setEnlaceTelegram(null); })}>

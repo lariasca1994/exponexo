@@ -52,7 +52,7 @@ export function Registro() {
       <section className="login-panel" aria-labelledby="registro-title">
         <div className="login-form-content">
           <p className="login-step">Crear cuenta <span aria-hidden="true">·</span> Paso {paso} de 2</p>
-          <h1 id="registro-title">{paso === 1 ? "Únete a ExpoNexo" : "Confirma tu correo"}</h1>
+          <h1 id="registro-title">{paso === 1 ? "Crea tu cuenta" : "Confirma tu correo"}</h1>
           <p className="login-description">
             {paso === 1
               ? "Crea tu cuenta de visitante o expositor. La verificación en dos pasos queda activa desde el primer ingreso."

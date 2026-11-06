@@ -15,8 +15,8 @@ export default defineConfig({
         "apple-touch-icon.png"
       ],
       manifest: {
-        name: "ExpoNexo · Plataforma de Ferias y Eventos",
-        short_name: "ExpoNexo",
+        name: "Plataforma de ferias y eventos",
+        short_name: "Ferias y eventos",
         description: "Reserva de stands, entradas con QR, agenda de negocios y mesa de ayuda.",
         theme_color: "#0f172a",
         background_color: "#0f172a",
