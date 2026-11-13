@@ -113,6 +113,10 @@ ferias publicadas, sus fechas y su aforo.
 También puedes pulsar **Ingresar con llave de acceso** para entrar con la huella, el rostro o el PIN
 del dispositivo, si ya registraste una llave en **Mi cuenta**.
 
+En el segundo paso, el código de 6 dígitos (app o correo) se ve en seis casillas; con la app, un
+círculo muestra cuándo cambia el código. El candado de arriba se abre cuando el código es correcto
+y entras a **Inicio**; si no lo es, tiembla y el aviso explica qué pasó.
+
 ### 4.4 Recuperar la contraseña
 
 ![Recuperación de contraseña con sus campos numerados](img/manual/07-recuperar.png)
@@ -184,6 +188,13 @@ El botón con la luna o el sol, junto a **Ingresar**, cambia los colores y se re
 - **Mi reserva desapareció.** Venció sin pagarse: el stand volvió a quedar disponible.
 - **No me llegan avisos a Telegram.** Vincúlalo en **Mi cuenta → Avisos por Telegram**; los avisos
   siempre llegan también al correo.
+- **¿Cómo uso el menú?** Con la sesión abierta el menú va a la izquierda: **Compactar menú** deja
+  solo los íconos (al pasar el ratón aparece el nombre) y la elección se recuerda en ese equipo. En
+  el teléfono es una barra abajo; **Más** abre las opciones que no caben.
+- **¿Qué significa "Sin conexión"?** Tu equipo perdió internet. La pantalla lo comprueba sola y
+  vuelve cuando hay red; también puedes pulsar el botón para intentar ahora.
+- **¿Qué significa "Este stand no está en el plano"?** La dirección escrita no existe. Usa **Ver
+  eventos** o **Volver al inicio**; si tenías la sesión abierta, sigue abierta.
 
 ## 5. Seguridad: tu información protegida
 
