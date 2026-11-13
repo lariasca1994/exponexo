@@ -2,36 +2,62 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0f172a" />
     <title>Sin conexión · Plataforma de ferias y eventos</title>
+    <!-- Página autónoma: colores copiados de tokens.css. El script va aparte (offline.js) porque
+         la política de seguridad del sitio no permite scripts en línea. -->
     <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        font-family: system-ui, -apple-system, sans-serif;
-        background: #0f172a;
-        color: #f8fafc;
-        padding: 1.5rem;
-        text-align: center;
-      }
-      .card {
-        max-width: 420px;
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 16px;
-        padding: 2rem;
-      }
-      h1 { margin-top: 0; font-size: 1.4rem; }
-      p { color: #cbd5e1; line-height: 1.5; }
+      :root { color-scheme: light; --fondo: #f6f7f9; --superficie: #ffffff; --texto: #111827; --suave: #4b5563; --borde: #d6dae1; --sql: #cc2927; --ora: #c74634; --mdb: #00684a; }
+      @media (prefers-color-scheme: dark) { :root { color-scheme: dark; --fondo: #0f172a; --superficie: #1e293b; --texto: #f8fafc; --suave: #cbd5e1; --borde: #334155; --sql: #ff8a80; --mdb: #00ed64; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--fondo); color: var(--texto); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
+      main { display: grid; justify-items: center; gap: 12px; width: 100%; max-width: 440px; animation: entrar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+      @keyframes entrar { from { opacity: 0; transform: translateY(10px); } }
+      .plano { position: relative; width: 230px; padding: 12px; border: 1px solid var(--borde); border-radius: 14px; background: var(--superficie); overflow: hidden; }
+      .plano svg { display: block; width: 100%; height: auto; }
+      .plano rect.stand { fill: none; stroke: var(--borde); stroke-width: 2; stroke-dasharray: 5 4; }
+      .plano path { fill: none; stroke: var(--borde); stroke-dasharray: 3 5; }
+      .plano::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--mdb) 18%, transparent), transparent); animation: barrer 2.6s ease-in-out infinite; }
+      @keyframes barrer { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+      .franja { width: 64px; height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--sql) 0 33.3%, var(--ora) 33.3% 66.6%, var(--mdb) 66.6%); }
+      h1 { margin: 0; font-size: 26px; }
+      p { margin: 0; color: var(--suave); }
+      .pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 18px; margin-top: 8px; }
+      .cuenta { display: flex; align-items: center; gap: 8px; color: var(--suave); font-size: 14px; }
+      .cuenta svg { width: 22px; height: 22px; transform: rotate(-90deg); }
+      .cuenta circle { fill: none; stroke-width: 3; }
+      .fondo { stroke: var(--borde); }
+      .valor { stroke: var(--sql); stroke-dasharray: 1; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+      button { min-height: 44px; padding: 0 20px; border: 0; border-radius: 10px; background: #cc2927; color: #fff; font: inherit; font-weight: 600; cursor: pointer; transition: transform 0.12s; }
+      button:active:not(:disabled) { transform: scale(0.97); }
+      button:disabled { cursor: progress; opacity: 0.7; }
+      button:focus-visible { outline: 3px solid color-mix(in srgb, #cc2927 40%, transparent); outline-offset: 2px; }
+      @media (prefers-reduced-motion: reduce) { main, .plano::after { animation: none; } .valor, button { transition: none; } }
     </style>
   </head>
   <body>
-    <main class="card">
+    <main role="status" aria-live="polite">
+      <div class="plano" aria-hidden="true">
+        <svg viewBox="0 0 200 120">
+          <path d="M8 42H192M8 82H192M70 8V112M134 8V112" />
+          <rect class="stand" x="12" y="10" width="50" height="26" rx="4" /><rect class="stand" x="78" y="10" width="50" height="26" rx="4" /><rect class="stand" x="142" y="10" width="46" height="26" rx="4" />
+          <rect class="stand" x="12" y="50" width="50" height="26" rx="4" /><rect class="stand" x="78" y="50" width="50" height="26" rx="4" /><rect class="stand" x="142" y="50" width="46" height="26" rx="4" />
+          <rect class="stand" x="12" y="90" width="50" height="22" rx="4" /><rect class="stand" x="78" y="90" width="50" height="22" rx="4" /><rect class="stand" x="142" y="90" width="46" height="22" rx="4" />
+        </svg>
+      </div>
+      <div class="franja" aria-hidden="true"></div>
       <h1>Estás sin conexión</h1>
-      <p>La plataforma necesita conexión a internet para consultar reservas, pagos y credenciales en tiempo real.</p>
-      <p>Comprueba tu red y vuelve a intentarlo.</p>
+      <p>La plataforma necesita internet para consultar reservas, pagos y credenciales en tiempo real. La página vuelve sola cuando haya red.</p>
+      <div class="pie">
+        <span class="cuenta">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="fondo" cx="12" cy="12" r="9" /><circle id="valor" class="valor" cx="12" cy="12" r="9" pathLength="1" /></svg>
+          <span id="texto"></span>
+        </span>
+        <button type="button" id="reintentar">Reintentar ahora</button>
+      </div>
     </main>
+    <script src="/offline.js"></script>
   </body>
 </html>

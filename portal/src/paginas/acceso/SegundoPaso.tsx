@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { identityApi } from "../../api/clienteIdentidad";
 import { PanelMarca } from "../../componentes/PanelMarca";
 import { useSession } from "../../sesion/almacenSesion";
+import { AnilloApp, Candado, VistaCasillas, type EstadoCandado } from "../../efectos/SegundoFactor";
 
 type Metodo = "app" | "correo" | "respaldo";
 
@@ -20,6 +21,9 @@ export function SegundoPaso() {
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  // Solo presentación: candado y casillas del código.
+  const [candado, setCandado] = useState<EstadoCandado>("normal");
+  const [foco, setFoco] = useState(false);
 
   if (!pendingMfa) {
     return <Navigate to="/ingreso" replace />;
@@ -46,12 +50,20 @@ export function SegundoPaso() {
     e.preventDefault();
     setError(null);
     setCargando(true);
+    setCandado("verificando");
     try {
       const tokens = await identityApi.loginStep2(pendingMfa.pase_segundo_paso, { metodo, codigo: codigo.trim() });
+      // El candado se abre un momento antes de entrar.
+      setCandado("abierto");
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        await new Promise((resolver) => window.setTimeout(resolver, 450));
+      }
       establishSession(tokens);
       navigate("/inicio");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Código de verificación inválido.");
+      setCandado("error");
+      window.setTimeout(() => setCandado("normal"), 700);
     } finally {
       setCargando(false);
     }
@@ -61,6 +73,7 @@ export function SegundoPaso() {
     <div className="login-page">
       <section className="login-panel" aria-labelledby="mfa-title">
         <div className="login-form-content">
+          <Candado estado={candado} />
           <p className="login-step">Acceso seguro <span aria-hidden="true">·</span> Paso 2 de 2</p>
           <h1 id="mfa-title">Verifica que eres tú</h1>
           <p className="login-description">
@@ -96,19 +109,26 @@ export function SegundoPaso() {
             )}
             <div className="form-group" style={{ marginTop: "var(--esp-4)" }}>
               <label htmlFor="codigo">{metodo === "respaldo" ? "Código de respaldo (XXXX-XXXX)" : "Código de 6 dígitos"}</label>
-              <input
-                id="codigo"
-                className="input-field input-codigo"
-                type="text"
-                inputMode={metodo === "respaldo" ? "text" : "numeric"}
-                autoComplete="one-time-code"
-                maxLength={16}
-                required
-                autoFocus
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder={metodo === "respaldo" ? "A1B2-C3D4" : "123456"}
-              />
+              {/* Con 6 dígitos (app o correo) el mismo campo se ve como seis casillas. */}
+              <div className={metodo === "respaldo" ? undefined : "casillas-codigo"}>
+                <input
+                  id="codigo"
+                  className="input-field input-codigo"
+                  type="text"
+                  inputMode={metodo === "respaldo" ? "text" : "numeric"}
+                  autoComplete="one-time-code"
+                  maxLength={16}
+                  required
+                  autoFocus
+                  value={codigo}
+                  onBlur={() => setFoco(false)}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  onFocus={() => setFoco(true)}
+                  placeholder={metodo === "respaldo" ? "A1B2-C3D4" : "123456"}
+                />
+                {metodo !== "respaldo" && <VistaCasillas valor={codigo} foco={foco} error={candado === "error"} />}
+              </div>
+              {metodo === "app" && <AnilloApp />}
             </div>
             <button type="submit" className="btn btn-primary login-submit" disabled={cargando}>
               {cargando ? "Verificando…" : "Confirmar e ingresar"}
