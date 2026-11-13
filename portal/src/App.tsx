@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { identityApi } from "./api/clienteIdentidad";
 import { Ingreso } from "./paginas/acceso/Ingreso";
 import { Portada } from "./paginas/acceso/Portada";
@@ -23,10 +23,13 @@ import { MonitoreoDispositivos } from "./paginas/soporte/MonitoreoDispositivos";
 import { ProtectedRoute, useSession } from "./sesion/almacenSesion";
 import { suscribirMantenimiento } from "./api/mantenimiento";
 import { Mantenimiento } from "./paginas/Mantenimiento";
+import { NoEncontrada } from "./paginas/NoEncontrada";
+import { ICONOS, MenuLateral, type OpcionMenu } from "./componentes/MenuLateral";
 
 export function App() {
   const { user, refreshToken, clearSession } = useSession();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   // Tema: el elegido antes (si se guardó) o el del sistema
   const [darkTheme, setDarkTheme] = useState(() => {
     let saved: string | null = null;
@@ -67,43 +70,52 @@ export function App() {
     navigate("/ingreso");
   };
 
+  const opciones: OpcionMenu[] = user
+    ? [
+        { to: "/eventos", texto: "Eventos", icono: ICONOS.eventos },
+        { to: "/inicio", texto: "Inicio", icono: ICONOS.inicio },
+        ...(user.rol === "expositor" ? [{ to: "/reservas", texto: "Mis reservas", corto: "Reservas", icono: ICONOS.reservas }] : []),
+        ...(user.rol === "visitante" || user.rol === "expositor"
+          ? [
+              { to: "/mis-entradas", texto: "Mis entradas", corto: "Entradas", icono: ICONOS.entradas },
+              { to: "/agenda", texto: "Agenda B2B", corto: "Agenda", icono: ICONOS.agenda },
+              { to: "/facturas", texto: "Facturas", icono: ICONOS.facturas }
+            ]
+          : []),
+        { to: "/soporte/tickets", texto: "Mesa de ayuda", corto: "Ayuda", icono: ICONOS.ayuda },
+        ...(user.rol === "personal" || user.rol === "administrador"
+          ? [
+              { to: "/puerta/validar-qr", texto: "Validar QR", icono: ICONOS.qr },
+              { to: "/soporte/dispositivos", texto: "Dispositivos", icono: ICONOS.dispositivos }
+            ]
+          : []),
+        ...(user.rol === "administrador"
+          ? [
+              { to: "/admin/tablero", texto: "Tablero", icono: ICONOS.tablero },
+              { to: "/admin/catalogo", texto: "Catálogo", icono: ICONOS.catalogo }
+            ]
+          : [])
+      ]
+    : [];
+
+  // Grupo de pantalla para la transición: las de acceso solo animan su formulario.
+  const esAcceso = ["/registro", "/ingreso", "/segundo-paso", "/recuperar"].includes(pathname);
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${user ? " con-menu" : ""}`}>
+      {user && <MenuLateral opciones={opciones} />}
       <header className="topbar">
         <Link to={user ? "/inicio" : "/"} className="brand-title">
           <img src="/icono.svg" alt="" width="30" height="30" />
           <span>Ferias y eventos</span>
         </Link>
 
-        <nav className="nav-links" aria-label="Navegación principal">
-          <NavLink to="/eventos">Eventos</NavLink>
-          {user && (
-            <>
-              <NavLink to="/inicio">Inicio</NavLink>
-              {user.rol === "expositor" && <NavLink to="/reservas">Mis reservas</NavLink>}
-              {(user.rol === "visitante" || user.rol === "expositor") && (
-                <>
-                  <NavLink to="/mis-entradas">Mis entradas</NavLink>
-                  <NavLink to="/agenda">Agenda B2B</NavLink>
-                  <NavLink to="/facturas">Facturas</NavLink>
-                </>
-              )}
-              <NavLink to="/soporte/tickets">Mesa de ayuda</NavLink>
-              {(user.rol === "personal" || user.rol === "administrador") && (
-                <>
-                  <NavLink to="/puerta/validar-qr">Validar QR</NavLink>
-                  <NavLink to="/soporte/dispositivos">Dispositivos</NavLink>
-                </>
-              )}
-              {user.rol === "administrador" && (
-                <>
-                  <NavLink to="/admin/tablero">Tablero</NavLink>
-                  <NavLink to="/admin/catalogo">Catálogo</NavLink>
-                </>
-              )}
-            </>
-          )}
-        </nav>
+        {/* Sin sesión el encabezado conserva su navegación; con sesión va en el menú lateral. */}
+        {!user && (
+          <nav className="nav-links" aria-label="Navegación principal">
+            <NavLink to="/eventos">Eventos</NavLink>
+          </nav>
+        )}
 
         <div className="topbar-acciones">
           <button
@@ -152,6 +164,7 @@ export function App() {
 
       <main>
         {servicioCaido ? <Mantenimiento /> : (
+        <div key={pathname} className={`transicion-entra${esAcceso ? " transicion-acceso" : ""}`}>
         <Routes>
           <Route path="/" element={<Portada />} />
           <Route path="/registro" element={<Registro />} />
@@ -257,7 +270,9 @@ export function App() {
             }
           />
           <Route path="/perfil/seguridad" element={<Navigate to="/perfil" replace />} />
+          <Route path="*" element={<NoEncontrada />} />
         </Routes>
+        </div>
         )}
       </main>
       <footer className="pie-pagina">

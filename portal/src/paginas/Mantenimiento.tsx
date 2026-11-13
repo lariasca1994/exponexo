@@ -7,6 +7,23 @@ const INTERVALO_SEGUNDOS = 30;
 export function Mantenimiento() {
   const [segundos, setSegundos] = useState(INTERVALO_SEGUNDOS);
   const [comprobando, setComprobando] = useState(false);
+  // Sin internet en el equipo no es mantenimiento: la misma pantalla lo dice y reintenta al volver la red.
+  const [sinRed, setSinRed] = useState(() => !navigator.onLine);
+
+  useEffect(() => {
+    const conRed = () => {
+      setSinRed(false);
+      setComprobando(true);
+      void comprobarServicio().finally(() => setComprobando(false));
+    };
+    const desconectado = () => setSinRed(true);
+    window.addEventListener("online", conRed);
+    window.addEventListener("offline", desconectado);
+    return () => {
+      window.removeEventListener("online", conRed);
+      window.removeEventListener("offline", desconectado);
+    };
+  }, []);
 
   useEffect(() => {
     const reloj = setInterval(() => {
@@ -36,13 +53,24 @@ export function Mantenimiento() {
           <span />
           <span />
         </div>
-        <p className="mantenimiento__antetitulo">Mantenimiento</p>
-        <h1>Estamos preparando el recinto</h1>
-        <p>
-          Uno de nuestros servicios no responde en este momento. Puede estar despertando después de un
-          rato sin uso: suele tardar menos de un minuto. Lo que hacías no se guardó a medias.
-        </p>
+        <p className="mantenimiento__antetitulo">{sinRed ? "Sin señal" : "Mantenimiento"}</p>
+        <h1>{sinRed ? "Sin conexión" : "Estamos preparando el recinto"}</h1>
+        {sinRed ? (
+          <p>
+            Tu equipo no tiene internet, así que no se pueden consultar reservas, pagos ni entradas. La
+            pantalla vuelve sola cuando haya red. Lo que hacías no se guardó a medias.
+          </p>
+        ) : (
+          <p>
+            Uno de nuestros servicios no responde en este momento. Puede estar despertando después de un
+            rato sin uso: suele tardar menos de un minuto. Lo que hacías no se guardó a medias.
+          </p>
+        )}
         <p className="mantenimiento__cuenta">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle className="anillo-fondo" cx="12" cy="12" r="9" />
+            <circle className="anillo-valor" cx="12" cy="12" r="9" pathLength={1} style={{ strokeDashoffset: comprobando ? 0 : 1 - segundos / INTERVALO_SEGUNDOS }} />
+          </svg>
           {comprobando ? "Comprobando…" : `Nuevo intento en ${segundos} s`}
         </p>
         <button type="button" className="btn btn-primary" onClick={reintentar} disabled={comprobando}>

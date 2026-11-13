@@ -9,6 +9,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: [
         "offline.html",
+        "offline.js",
         "icono.svg",
         "icono-192.png",
         "icono-512.png",

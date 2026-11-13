@@ -9,6 +9,8 @@ import "./estilos/base.css";
 import "./estilos/layout.css";
 import "./estilos/componentes.css";
 import "./estilos/acceso.css";
+import "./efectos/efectos.css";
+import { iniciarEfectos } from "./efectos/efectos";
 
 const queryClient = new QueryClient();
 
@@ -23,3 +25,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </React.StrictMode>
 );
+
+iniciarEfectos();
