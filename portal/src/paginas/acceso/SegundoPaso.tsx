@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { identityApi } from "../../api/clienteIdentidad";
 import { PanelMarca } from "../../componentes/PanelMarca";
@@ -24,9 +24,12 @@ export function SegundoPaso() {
   // Solo presentación: candado y casillas del código.
   const [candado, setCandado] = useState<EstadoCandado>("normal");
   const [foco, setFoco] = useState(false);
+  // Al validar el código, establishSession borra pendingMfa: sin esta marca, la redirección a
+  // /ingreso de abajo le ganaba a navigate("/inicio") y la persona terminaba en el ingreso.
+  const verificado = useRef(false);
 
   if (!pendingMfa) {
-    return <Navigate to="/ingreso" replace />;
+    return verificado.current ? null : <Navigate to="/ingreso" replace />;
   }
 
   const metodos: Metodo[] = [
@@ -58,6 +61,7 @@ export function SegundoPaso() {
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         await new Promise((resolver) => window.setTimeout(resolver, 450));
       }
+      verificado.current = true;
       establishSession(tokens);
       navigate("/inicio");
     } catch (err) {
