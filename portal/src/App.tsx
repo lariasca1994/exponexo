@@ -276,7 +276,7 @@ export function App() {
         )}
       </main>
       <footer className="pie-pagina">
-        Plataforma de ferias y eventos — proyecto de portafolio de Luis Felipe Arias.
+        Plataforma de ferias y eventos — proyecto de portafolio de Luis F. A..
       </footer>
     </div>
   );
