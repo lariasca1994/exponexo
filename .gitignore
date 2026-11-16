@@ -65,3 +65,15 @@ docs/DISENO.md
 docs/arquitectura.py
 *.docx
 *.xlsx
+
+# Documentación técnica interna y scripts de creación de infraestructura: solo local
+docs/ARQUITECTURA.md
+docs/CONTRATOS-API.md
+docs/DECISIONES.md
+docs/EVENTOS.md
+docs/MODELO-DE-DATOS.md
+infra/README.md
+infra/aws/
+infra/azure/
+infra/gcp/
+.github/workflows/README.md

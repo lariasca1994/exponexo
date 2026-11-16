@@ -12,6 +12,5 @@ python -m pip install pytest pytest-cov
 python -m pytest pruebas/test_e2e_integration.py -v
 ```
 
-El workflow `.github/workflows/e2e.yml` genera claves RSA temporales y ejecuta el recorrido con
-SQLite en memoria. No valida SQL Server ni Oracle reales. Las cuentas y datos de prueba deben ser
-inventados; nunca incluyas secretos reales.
+El workflow `.github/workflows/e2e.yml` ejecuta el recorrido con una base en memoria. Las cuentas y
+los datos de prueba deben ser inventados; nunca incluyas secretos reales.

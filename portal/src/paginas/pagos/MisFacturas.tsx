@@ -57,7 +57,7 @@ export function MisFacturas() {
                 <strong>Cliente:</strong> {f.razon_social} ({f.nit_cliente})
               </p>
               <p style={{ margin: "0.25rem 0" }}>
-                <strong>Total:</strong> ${Number(f.total).toLocaleString()} COP
+                <strong>Total:</strong> ${Number(f.total).toLocaleString("es-CO")} COP
               </p>
               <button
                 type="button"
@@ -75,25 +75,25 @@ export function MisFacturas() {
           <div className="panel-card">
             <h3 style={{ marginTop: 0 }}>Desglose · {detalle.factura.numero}</h3>
             <p>
-              <strong>Fecha emisión:</strong> {new Date(detalle.factura.fecha).toLocaleString()}
+              <strong>Fecha emisión:</strong> {new Date(detalle.factura.fecha).toLocaleString("es-CO")}
             </p>
             <p>
-              <strong>Subtotal:</strong> ${Number(detalle.factura.subtotal).toLocaleString()} COP
+              <strong>Subtotal:</strong> ${Number(detalle.factura.subtotal).toLocaleString("es-CO")} COP
             </p>
             <p>
-              <strong>Impuesto (IVA):</strong> ${Number(detalle.factura.impuesto).toLocaleString()}{" "}
+              <strong>Impuesto (IVA):</strong> ${Number(detalle.factura.impuesto).toLocaleString("es-CO")}{" "}
               COP
             </p>
             <p style={{ fontSize: "1.1rem", fontWeight: 700 }}>
-              Total: ${Number(detalle.factura.total).toLocaleString()} COP
+              Total: ${Number(detalle.factura.total).toLocaleString("es-CO")} COP
             </p>
             <hr style={{ borderColor: "var(--border-color)" }} />
             <h4>Conceptos facturados</h4>
             <ul>
               {detalle.detalles.map((l) => (
                 <li key={l.id}>
-                  {l.descripcion} — Valor unitario: ${Number(l.valor_unitario).toLocaleString()} +
-                  IVA ${Number(l.impuesto).toLocaleString()}
+                  {l.descripcion} — Valor unitario: ${Number(l.valor_unitario).toLocaleString("es-CO")} +
+                  IVA ${Number(l.impuesto).toLocaleString("es-CO")}
                 </li>
               ))}
             </ul>

@@ -83,7 +83,7 @@ export function PagarOrden() {
               <code>{orden.referencia.slice(0, 8)}</code>)
             </p>
             <p style={{ fontSize: "1.3rem", fontWeight: 700 }}>
-              Total a pagar: ${Number(orden.monto).toLocaleString()} {orden.moneda}
+              Total a pagar: ${Number(orden.monto).toLocaleString("es-CO")} {orden.moneda}
             </p>
 
             {qr && (
@@ -156,9 +156,9 @@ export function PagarOrden() {
             {facturaEmitida.factura.nit_cliente})
           </p>
           <p>
-            <strong>Subtotal:</strong> ${Number(facturaEmitida.factura.subtotal).toLocaleString()} ·{" "}
-            <strong>IVA:</strong> ${Number(facturaEmitida.factura.impuesto).toLocaleString()} ·{" "}
-            <strong>Total:</strong> ${Number(facturaEmitida.factura.total).toLocaleString()} COP
+            <strong>Subtotal:</strong> ${Number(facturaEmitida.factura.subtotal).toLocaleString("es-CO")} ·{" "}
+            <strong>IVA:</strong> ${Number(facturaEmitida.factura.impuesto).toLocaleString("es-CO")} ·{" "}
+            <strong>Total:</strong> ${Number(facturaEmitida.factura.total).toLocaleString("es-CO")} COP
           </p>
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
             <Link to="/facturas" className="btn btn-primary">

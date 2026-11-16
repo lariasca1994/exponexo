@@ -1,227 +1,219 @@
-# 📘 Manual de usuario · ExpoNexo
+# 📘 Manual de usuario · ExpoNexo (Ferias y eventos)
 
-Guía para usar la plataforma paso a paso: qué significa cada campo, qué datos se ingresan y qué
-protege la plataforma. Para la parte técnica vuelve al [README](../README.md).
+## 1. Portada
 
-**Demo:** [ExpoNexo (Vercel)](https://exponexo-portal.vercel.app)
+![Portada de ExpoNexo: tu feria, de la reserva a la puerta de entrada](img/manual/01-portada.png)
+
+| | |
+|---|---|
+| **Producto** | ExpoNexo · Ferias y eventos |
+| **Documento** | Manual de usuario |
+| **Versión** | 2.0 · noviembre de 2026 |
+| **Dirigido a** | Visitantes, expositores y personal de un recinto de ferias |
+| **Dirección** | [ExpoNexo](https://exponexo-portal.vercel.app) |
+| **Autor** | Luis F. A. |
 
 ## Contenido
 
-1. [Proyecto: objetivos y alcances](#1-proyecto-objetivos-y-alcances)
-2. [Glosario](#2-glosario)
-3. [Plataformas, base de datos y servicios](#3-plataformas-base-de-datos-y-servicios)
-4. [Paso a paso](#4-paso-a-paso)
-5. [Seguridad: tu información protegida](#5-seguridad-tu-información-protegida)
-6. [Agradecimientos](#6-agradecimientos)
+1. [Portada](#1-portada)
+2. [Introducción](#2-introducción)
+3. [Objetivo](#3-objetivo)
+4. [Alcance](#4-alcance)
+5. [Acceso al sistema](#5-acceso-al-sistema)
+6. [Pantalla principal](#6-pantalla-principal)
+7. [Navegación](#7-navegación)
+8. [Funcionalidades](#8-funcionalidades)
+9. [Gestión de perfil](#9-gestión-de-perfil)
+10. [Mensajes frecuentes](#10-mensajes-frecuentes)
+11. [Preguntas frecuentes](#11-preguntas-frecuentes)
+12. [Glosario](#12-glosario)
 
 ---
 
-## 1. Proyecto: objetivos y alcances
+## 2. Introducción
 
-### Objetivo
+**ExpoNexo** reúne en una sola plataforma lo que pasa en un recinto de ferias: los expositores
+reservan y pagan sus stands, los visitantes compran su entrada y agendan citas de negocios, y el
+personal del recinto atiende el soporte y vigila los dispositivos durante el evento.
 
-Es la plataforma de un recinto de ferias y eventos. Cada persona ve lo que le corresponde según su
-rol:
+Este manual explica cada pantalla, paso a paso y con imágenes.
 
-```
-Visitante → entrada con QR → agenda de citas de negocios
-Expositor → stand en el plano → pago con QR → factura
-Personal  → validación en la puerta → tickets de soporte → monitoreo de dispositivos
-```
+![Cómo funciona ExpoNexo: personas, aplicación, plataforma e información](img/manual/00-como-funciona.svg)
 
-### Alcance: qué necesitas y qué esperar
+## 3. Objetivo
 
-- Solo necesitas un navegador; también se puede instalar como aplicación (opción *Instalar* o
-  *Agregar a la pantalla de inicio*).
-- El catálogo trae eventos, pabellones, stands y empresas de demostración para que veas cómo
-  funciona desde el primer momento.
-- La primera consulta del día puede tardar unos segundos: los servicios se apagan solos sin uso y
-  despiertan con la primera visita. Si tardan demasiado verás la pantalla de mantenimiento, que
-  se recupera sola.
+Que cualquier persona pueda, sin conocimientos técnicos:
 
-### Límites
+- Consultar los eventos y el plano de stands de cada feria.
+- Crear su cuenta e ingresar de forma segura.
+- Reservar y pagar un stand (expositores) o comprar su entrada y agendar citas (visitantes).
 
-Es una demo de portafolio:
+## 4. Alcance
 
-- Los pagos son simulados: no se cobra dinero real.
-- No escribas datos personales o confidenciales en reservas, citas ni tickets.
-- El registro público solo crea cuentas de **visitante** o **expositor**; las de personal y
-  administración las crea la plataforma.
+**Incluye:** catálogo de eventos, plano de stands en tiempo real, reservas y pago con QR, facturas,
+entradas con QR, agenda de negocios, mesa de ayuda y monitoreo de dispositivos para el personal, y
+uso en celular, tablet y computador.
 
-## 2. Glosario
+**No incluye:** pagos con dinero real: los cobros son de demostración.
 
-| Término | Qué significa |
-|---|---|
-| **Stand** | Espacio que un expositor alquila dentro de un pabellón: básico, esquinero o isla. |
-| **Pabellón** | Edificio del recinto con su plano de stands y sus salas de reunión. |
-| **Reserva** | Apartado de un stand mientras se paga; si vence sin pagarse, el stand vuelve a quedar libre. |
-| **Código QR** | Imagen que se lee con la cámara: la usan las entradas y los cobros, y está firmada para que no se pueda falsificar. |
-| **Cita de negocios (B2B)** | Reunión agendada entre un visitante y un expositor en una sala libre. |
-| **Ticket** | Solicitud de soporte del recinto (red, energía, mobiliario, acceso, dispositivos). |
-| **SLA** | Tiempo máximo comprometido para atender un ticket según su prioridad. |
-| **Verificación en dos pasos (MFA)** | Además de la contraseña, se pide un código de tu app autenticadora o de tu correo. |
-| **Llave de acceso** | Ingreso con la huella, el rostro o el PIN del dispositivo, sin contraseña. |
-| **Vincular Telegram** | Conectar tu chat de Telegram con tu cuenta para recibir ahí tus avisos. |
-| **API** | Puerta de entrada de un programa para que otros programas le pidan o le envíen datos. |
-| **Modo mantenimiento** | Pantalla que aparece cuando un servicio no responde; se recupera sola cuando vuelve. |
+**Qué necesitas:** un navegador actualizado y conexión a internet. Para reservar o comprar, un
+correo propio y una app autenticadora en el celular (o acceso a tu correo para recibir códigos).
 
-## 3. Plataformas, base de datos y servicios
+## 5. Acceso al sistema
 
-| Parte | Nube | Base de datos | Qué hace |
-|---|---|---|---|
-| Portal | Vercel | — | Las pantallas que ves |
-| Identidad y reservas | Azure Container Apps | Azure SQL | Cuentas, verificación en dos pasos, catálogo, reservas, entradas y agenda |
-| Pagos | Google Cloud Run | Oracle Autonomous | Órdenes, cobro con QR y facturas |
-| Mesa de ayuda | Azure Container Apps | MongoDB Atlas | Tickets con SLA y monitoreo de dispositivos |
-| Avisos | AWS Lambda | Azure SQL (destinatarios) | Correo (Brevo) y Telegram a la persona afectada |
-| Imágenes | Cloudinary | — | Portadas de eventos, logos y planos |
+### 5.1 Crear una cuenta
 
-## 4. Paso a paso
-
-### 4.1 Portada y eventos
-
-![Portada con los próximos eventos](img/manual/01-portada.png)
-
-La portada presenta el recinto y los próximos eventos. **Ver eventos** abre el catálogo con las
-ferias publicadas, sus fechas y su aforo.
-
-![Catálogo de eventos publicados](img/manual/04-eventos.png)
-
-### 4.2 Crear una cuenta
+Pulsa **Crear cuenta**.
 
 ![Formulario de registro con sus campos numerados](img/manual/02-registro.png)
 
-| # | Campo | Qué escribir | Reglas |
-|:-:|---|---|---|
-| 1 | Nombre completo | Tu nombre | Obligatorio |
-| 2 | Correo electrónico | El correo con el que vas a entrar | Formato válido y único |
-| 3 | Tipo de participación | Visitante o expositor | El personal y la administración no se piden aquí |
-| 4 | Contraseña | Tu contraseña | Mínimo **10 caracteres** con mayúscula, minúscula, número y símbolo |
-| 5 | Registrarme | Botón | Crea la cuenta y envía un código a tu correo para confirmarlo |
+| # | Campo | Qué escribir |
+|:-:|---|---|
+| 1 | Nombre completo | Tu nombre |
+| 2 | Correo electrónico | El correo con el que vas a entrar |
+| 3 | Tipo de participación | **Visitante** o **Expositor** |
+| 4 | Contraseña | Mínimo 10 caracteres, con mayúscula, minúscula, número y símbolo |
+| 5 | Registrarme | Crea la cuenta y envía un código a tu correo para confirmarlo |
 
-### 4.3 Iniciar sesión
+### 5.2 Iniciar sesión
 
 ![Formulario de ingreso con sus campos numerados](img/manual/03-ingreso.png)
 
-| # | Campo | Qué escribir |
+| # | Elemento | Qué hace |
 |:-:|---|---|
 | 1 | Correo electrónico | El correo de tu cuenta |
 | 2 | Contraseña | Tu contraseña (el ojo la muestra u oculta) |
-| 3 | ¿Olvidaste tu contraseña? | Abre la recuperación con código por correo (ver 4.4) |
-| 4 | Continuar | Pasa al segundo paso: código de tu app autenticadora, código por correo o código de respaldo |
+| 3 | ¿Olvidaste tu contraseña? | Abre la recuperación de contraseña (5.4) |
+| 4 | Continuar | Pasa al segundo paso de la verificación |
 
-También puedes pulsar **Ingresar con llave de acceso** para entrar con la huella, el rostro o el PIN
-del dispositivo, si ya registraste una llave en **Mi cuenta**.
+**Ingresar con llave de acceso** te deja entrar con la huella, el rostro o el PIN del dispositivo,
+si ya registraste una llave en **Mi cuenta**.
 
-En el segundo paso, el código de 6 dígitos (app o correo) se ve en seis casillas; con la app, un
-círculo muestra cuándo cambia el código. El candado de arriba se abre cuando el código es correcto
-y entras a **Inicio**; si no lo es, tiembla y el aviso explica qué pasó.
+### 5.3 Verificación en dos pasos
 
-### 4.4 Recuperar la contraseña
+Después de la contraseña escribes el código de 6 dígitos de tu app autenticadora o el que llega a tu
+correo (también sirve un código de respaldo). Con la app, un círculo muestra cuándo cambia el
+código; el candado se abre cuando el código es correcto.
 
-![Recuperación de contraseña con sus campos numerados](img/manual/07-recuperar.png)
+### 5.4 Recuperar la contraseña
 
-| # | Campo | Qué escribir |
+![Recuperación de contraseña con sus campos numerados](img/manual/05-recuperar.png)
+
+| # | Elemento | Qué hace |
 |:-:|---|---|
 | 1 | Correo electrónico | El correo de tu cuenta |
-| 2 | Enviar código | Envía un código de un solo uso a tu correo; la respuesta es la misma exista o no la cuenta |
+| 2 | Enviar código | Envía un código de un solo uso a tu correo |
 
-En el segundo paso escribes el **código**, la **nueva contraseña** (con el medidor de reglas) y su
-**confirmación**. Al restablecerla se cierran todas tus sesiones y te llega un aviso por correo y
-Telegram. El código vence en pocos minutos y deja de servir tras varios intentos fallidos.
+En el segundo paso escribes el código, la contraseña nueva y su confirmación. Al restablecerla se
+cierran todas tus sesiones y te llega un aviso por correo y Telegram.
 
-### 4.5 Mi cuenta
+## 6. Pantalla principal
 
-Con la sesión iniciada, pulsa tu nombre en la esquina superior derecha:
+**Eventos** muestra las ferias publicadas, con sus fechas, su aforo y el acceso a su plano de
+stands.
 
-- **Datos:** nombre, rol, correo, estado de Telegram y de la verificación en dos pasos.
+![Catálogo de eventos publicados](img/manual/06-pantalla-principal.png)
+
+## 7. Navegación
+
+Sin sesión, arriba están **Eventos**, el cambio de tema, **Ingresar** y **Crear cuenta**. Con la
+sesión abierta, el menú va a la izquierda (**Compactar menú** deja solo los íconos); en el celular es
+una barra abajo y **Más** abre las opciones que no caben.
+
+| Tablet en vertical | Celular |
+|:-:|:-:|
+| ![Eventos en una tablet en vertical](img/manual/07-navegacion-tablet.png) | ![Eventos en el celular](img/manual/08-navegacion-movil.png) |
+
+El botón con la luna o el sol cambia entre tema claro y oscuro, y se recuerda:
+
+![Portada en tema oscuro](img/manual/18-tema-oscuro.png)
+
+## 8. Funcionalidades
+
+### 8.1 Crear: reservar un stand o comprar una entrada
+
+**Expositores:** en el plano de stands elige uno disponible y pulsa **Reservar este stand**. En
+**Mis Reservas** pulsa **Pagar con QR**: se genera un QR de cobro con vigencia corta; al aprobarse,
+la reserva queda pagada y la factura aparece en **Facturas**.
+
+**Visitantes:** en **Mis Entradas → Adquirir nueva entrada** eliges el evento y el tipo, y pulsas
+**Pagar y activar QR**; ya pagada, aparece con su QR de acceso. En **Agenda B2B** pides una cita a un
+expositor; cuando la acepta, el sistema asigna una sala libre y avisa a ambos.
+
+### 8.2 Consultar: plano de stands
+
+En **Eventos**, **Ver plano de stands** abre el plano del pabellón. Los colores muestran el estado
+de cada stand: **verde** disponible, **naranja** reservado pendiente de pago y **azul** pagado. Al
+elegir uno ves su código, tipo, área, posición y precio.
+
+![Plano de stands con un stand seleccionado](img/manual/09-consultar-plano.png)
+
+### 8.3 Modificar: reservas, citas y tickets
+
+- **Mis Reservas:** paga o cancela tus reservas; una reserva sin pagar vence y el stand vuelve a
+  quedar disponible.
+- **Agenda B2B:** el expositor acepta o rechaza las citas que recibe.
+- **Personal del recinto:** en **Mesa de ayuda** crea y atiende tickets (cada prioridad tiene su
+  tiempo de atención y un ticket vencido se escala) y en **Validar QR en puerta** lee las entradas
+  (una entrada usada o alterada se rechaza).
+
+### 8.4 Reportar: facturas y tablero
+
+- **Facturas:** las facturas de tus pagos.
+- **Tablero** (administración): ocupación de stands, recaudo, entradas vendidas y estado del
+  soporte.
+- **Dispositivos** (personal): estado de kioscos, torniquetes y pantallas; si uno deja de reportar,
+  se abre un ticket solo.
+
+## 9. Gestión de perfil
+
+Con la sesión iniciada, pulsa tu nombre en la esquina superior derecha para abrir **Mi cuenta**:
+
+- **Datos:** nombre, rol, correo, Telegram y estado de la verificación en dos pasos.
 - **Cambiar contraseña:** pide la actual y la nueva; cierra tus sesiones en otros dispositivos.
-- **Avisos por Telegram:** pulsa **Vincular Telegram**, pulsa **Iniciar** en el bot de ExpoNexo y
-  vuelve con **Ya pulsé Iniciar**. Desde ahí tus avisos llegan por correo y por Telegram.
-- **App autenticadora:** escanea el QR y escribe el primer código; queda como método por defecto.
-- **Código por correo y respaldo:** elige el método por defecto y genera códigos de respaldo.
+- **Avisos por Telegram:** pulsa **Vincular Telegram**, luego **Iniciar** en el bot y vuelve con
+  **Ya pulsé Iniciar**.
+- **App autenticadora, código por correo y códigos de respaldo:** elige el método por defecto.
 - **Llaves de acceso** y **sesiones activas**.
 
-### 4.6 Plano de stands (expositores)
+## 10. Mensajes frecuentes
 
-![Plano de stands con un stand seleccionado](img/manual/05-plano-stands.png)
-
-1. En **Eventos**, pulsa **Ver plano de stands**.
-2. Los colores muestran el estado: **verde** disponible, **naranja** reservado pendiente de pago y
-   **azul** pagado.
-3. Al elegir un stand ves su código, tipo, área, posición y precio; si está disponible y entraste como expositor, pulsa
-   **Reservar este stand**.
-4. En **Mis Reservas** pulsa **Pagar con QR**: se genera un QR de cobro con vigencia corta. Al aprobarse
-   el pago la reserva queda pagada y la factura aparece en **Facturas**.
-
-### 4.7 Entradas y agenda de negocios (visitantes)
-
-- En **Mis Entradas → Adquirir nueva entrada** elige el evento y el tipo, y pulsa **Pagar y activar QR**; ya pagada aparece con su QR de acceso.
-- En **Agenda B2B** busca expositores, revisa sus horarios libres y pide una cita. Cuando el
-  expositor la acepta, el sistema asigna una sala libre y avisa a ambos.
-
-### 4.8 Operación del recinto (personal)
-
-- **Validar QR en puerta**: lee la entrada en la puerta; una entrada usada o alterada se rechaza.
-- **Mesa de ayuda**: crea y atiende tickets; cada prioridad tiene su tiempo de atención y un ticket
-  vencido se escala.
-- **Dispositivos**: estado de kioscos, torniquetes y pantallas; si uno deja de reportar se abre un
-  ticket automáticamente.
-
-### 4.9 Administración
-
-- **Catálogo**: crea y edita eventos, pabellones, stands y salas.
-- **Tablero**: ocupación de stands, recaudo, entradas vendidas y estado del soporte.
-
-### 4.10 Tema claro y oscuro
-
-![Portada en tema oscuro](img/manual/06-portada-oscuro.png)
-
-El botón con la luna o el sol, junto a **Ingresar**, cambia los colores y se recuerda en las siguientes visitas.
-
-### 4.11 Preguntas frecuentes
-
-- **¿Por qué la primera carga tarda?** Los servicios duermen sin uso para no generar costos;
-  despiertan con la primera visita.
-- **No me llegó el código por correo.** Revisa la carpeta de spam y pide uno nuevo desde el
-  segundo paso.
-- **Mi reserva desapareció.** Venció sin pagarse: el stand volvió a quedar disponible.
-- **No me llegan avisos a Telegram.** Vincúlalo en **Mi cuenta → Avisos por Telegram**; los avisos
-  siempre llegan también al correo.
-- **¿Cómo uso el menú?** Con la sesión abierta el menú va a la izquierda: **Compactar menú** deja
-  solo los íconos (al pasar el ratón aparece el nombre) y la elección se recuerda en ese equipo. En
-  el teléfono es una barra abajo; **Más** abre las opciones que no caben.
-- **¿Qué significa "Sin conexión"?** Tu equipo perdió internet. La pantalla lo comprueba sola y
-  vuelve cuando hay red; también puedes pulsar el botón para intentar ahora.
-- **¿Qué significa "Este stand no está en el plano"?** La dirección escrita no existe. Usa **Ver
-  eventos** o **Volver al inicio**; si tenías la sesión abierta, sigue abierta.
-
-## 5. Seguridad: tu información protegida
-
-### Qué datos se guardan y dónde
-
-| Dato | Dónde | Cómo |
+| Mensaje | Qué significa | Qué hacer |
 |---|---|---|
-| Correo, nombre y rol | Azure SQL | En la cuenta |
-| Chat de Telegram | Azure SQL | Solo si lo vinculas; puedes desvincularlo cuando quieras |
-| Contraseña | Azure SQL | Solo como huella; no se puede recuperar el texto original |
-| Secreto de la app autenticadora | Azure SQL | Cifrado |
-| Reservas, entradas y citas | Azure SQL | Asociadas a tu cuenta |
-| Órdenes y facturas | Oracle | Asociadas a tu cuenta |
-| Tickets | MongoDB | Con su historial |
+| Este stand no está en el plano | La dirección no existe | Usa **Ver eventos** o **Volver al inicio** |
+| Sin conexión | Tu equipo perdió internet | La pantalla reintenta sola, o pulsa el botón |
+| Mantenimiento | El servicio está despertando | Espera unos segundos: se recupera solo |
+| El código no es correcto | El código venció o está mal escrito | Escribe el código que muestra la app ahora |
 
-### Cómo se protege tu información
+| Página no encontrada | Sin conexión |
+|:-:|:-:|
+| ![Página no encontrada](img/manual/16-no-encontrada.png) | ![Pantalla sin conexión](img/manual/17-sin-conexion.png) |
 
-- Verificación en dos pasos obligatoria y llaves de acceso del dispositivo.
-- Bloqueo temporal ante intentos fallidos repetidos y registro de eventos de seguridad, depurado a
-  los 15 días.
-- Las sesiones usan tokens firmados que cada servicio verifica; las rutas internas solo aceptan
-  servicios autorizados.
-- Los códigos QR de entradas y cobros están firmados: uno alterado se rechaza.
-- Cambiar o restablecer la contraseña cierra las demás sesiones y te avisa por correo y Telegram.
-- Los avisos van solo a la persona afectada y nunca incluyen contraseñas, códigos ni tokens.
+## 11. Preguntas frecuentes
 
-## 6. Agradecimientos
+**¿Por qué la primera carga tarda?** Los servicios se suspenden cuando nadie los usa y despiertan
+con la primera visita.
 
-A las comunidades de FastAPI, Spring, .NET, React y a los planes gratuitos de Vercel, Azure,
-Google Cloud, AWS, Oracle Cloud, MongoDB Atlas, Brevo y Cloudinary que hacen posible el proyecto.
+**No me llegó el código por correo.** Revisa la carpeta de spam y pide uno nuevo.
+
+**Mi reserva desapareció.** Venció sin pagarse: el stand volvió a quedar disponible.
+
+**No me llegan avisos a Telegram.** Vincúlalo en **Mi cuenta → Avisos por Telegram**; los avisos
+siempre llegan también al correo.
+
+**¿Se puede instalar como aplicación?** Sí: en Chrome o Edge, **Instalar aplicación**; en iPhone,
+Safari → **Compartir → Agregar a inicio**.
+
+**¿Dónde pido ayuda o reporto un problema?** Telegram [@lfac6](https://t.me/lfac6), WhatsApp
+[@carraian160](https://wa.me/carraian160) o [ariascluisf@hotmail.com](mailto:ariascluisf@hotmail.com).
+
+## 12. Glosario
+
+| Término | Qué significa |
+|---|---|
+| **Agenda B2B** | Citas de negocios entre visitantes y expositores |
+| **Aforo** | Número máximo de personas que admite el evento |
+| **Expositor** | Empresa o persona que reserva un stand para mostrar sus productos |
+| **Pabellón** | Edificio del recinto donde están los stands |
+| **Stand** | Espacio del pabellón que se reserva para exponer |
+| **Verificación en dos pasos** | Además de la contraseña, se pide un código que solo tú puedes recibir |

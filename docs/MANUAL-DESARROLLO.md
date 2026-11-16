@@ -2,7 +2,7 @@
 
 Guía operativa para trabajar con el código que ya existe en este monorepositorio. Los README de
 cada servicio describen sus responsabilidades y comandos; este manual reúne el entorno local, las
-pruebas, la configuración y los flujos de CI/CD. No presupone que una nube, una base de producción
+pruebas y la configuración. No presupone que una nube, una base de producción
 o un secreto de GitHub ya estén configurados.
 
 ## Contenido
@@ -31,8 +31,6 @@ Convenciones vigentes en todo el código:
 Antes de cambiar un contrato o esquema, coordina proveedor, portal, consumidores de eventos,
 migraciones y procedimientos almacenados. Una vez en producción, no reescribas migraciones ya
 aplicadas: crea una nueva.
-Consulta [DECISIONES.md](DECISIONES.md), [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md) y
-[CONTRATOS-API.md](CONTRATOS-API.md) para el estado y la estrategia de compatibilidad.
 
 La documentación narrativa, los mensajes para las personas y la interfaz permanecen en español.
 Los nombres técnicos se escriben en inglés conforme se migren los contratos.
@@ -146,32 +144,16 @@ validado.
 
 ## 6. CI/CD y despliegues
 
-Los workflows están en [.github/workflows/](../.github/workflows/README.md). En general, las
-solicitudes de cambio ejecutan pruebas; los `push` a `main` pueden publicar y desplegar, si existen
-los secretos, permisos OIDC, recursos y nombres de servicios necesarios.
-
-| Flujo | Publicación y destino |
-|---|---|
-| Identidad y Reservas | GHCR y actualización de Azure Container Apps |
-| Pagos | Google Artifact Registry y Cloud Run |
-| Mesa de ayuda | GHCR y actualización de Azure Container Apps |
-| Eventos | Paquetes de Lambda y despliegue en AWS |
-
-Identidad y Mesa de ayuda requieren que Azure Container Apps pueda descargar la imagen de GHCR
- pública o mediante credenciales de registry. Si la imagen es privada, configura `GHCR_READ_TOKEN`
-con permiso de lectura de paquetes en el entorno de GitHub `produccion`; el workflow lo aplica a la
-Container App. Todo debe quedar en planes gratuitos: antes de crear un recurso, confirma que
-tiene opción gratuita, y configura la limpieza de imágenes y logs viejos para no salir de ella.
-
-Los workflows autentican a las nubes mediante OIDC. No agregues claves permanentes al código ni
-crees un despliegue manual como sustituto de un workflow fallido. Confirma la ejecución en GitHub
-Actions y comprueba la salud del servicio después de desplegar.
+Cada servicio tiene su flujo en GitHub Actions: las solicitudes de cambio ejecutan sus pruebas y los
+cambios integrados en `main` se publican y despliegan solos, sin pasos manuales. Las credenciales
+viven solo en los gestores de secretos de GitHub y de cada plataforma; nunca en el código. Después de
+un despliegue, confirma en Actions que terminó bien y revisa la salud del servicio.
 
 ## 7. Revisión antes de integrar
 
 1. Ejecuta las pruebas del componente afectado y revisa el resultado, no solo el código de salida.
 2. Ejecuta `git diff --check` y revisa el diff completo.
-3. Actualiza el README y los documentos técnicos directamente relacionados con el cambio.
+3. Actualiza el README relacionado con el cambio.
 4. Comprueba que no se hayan incluido `.env`, credenciales, claves privadas, datos personales ni
    artefactos de compilación.
 5. Para cambios de API, eventos, IDs o tablas, valida compatibilidad y migraciones con cada

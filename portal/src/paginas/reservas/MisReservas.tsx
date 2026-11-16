@@ -72,10 +72,10 @@ export function MisReservas() {
             <span className="badge">{r.estado.toUpperCase()}</span>
             <h3 style={{ marginBottom: "0.4rem" }}>Reserva #{r.id.slice(0, 8)}</h3>
             <p style={{ margin: "0.3rem 0" }}>
-              <strong>Monto congelado:</strong> ${Number(r.monto).toLocaleString()} COP
+              <strong>Monto congelado:</strong> ${Number(r.monto).toLocaleString("es-CO")} COP
             </p>
             <p style={{ margin: "0.3rem 0", fontSize: "0.88rem", color: "var(--text-secondary)" }}>
-              <strong>Vence en:</strong> {new Date(r.vence_en).toLocaleString()}
+              <strong>Vence en:</strong> {new Date(r.vence_en).toLocaleString("es-CO")}
             </p>
             {r.estado === "pendiente_pago" && (
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>

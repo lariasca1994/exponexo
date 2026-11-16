@@ -25,7 +25,7 @@ export function ListaEventos() {
 
   return (
     <div className="container">
-      <h1 style={{ marginTop: 0 }}>Eventos y Ferias Publicadas</h1>
+      <h1 style={{ marginTop: 0 }}>Eventos y ferias publicadas</h1>
       <p style={{ color: "var(--text-secondary)" }}>
         Selecciona un evento para explorar el plano de sus pabellones y el estado de cada stand en
         tiempo real.

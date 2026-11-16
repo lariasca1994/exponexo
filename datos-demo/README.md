@@ -8,22 +8,20 @@ Datos ficticios y coherentes entre las tres bases, para mostrar el portal con co
 | Archivo | Para qué |
 |---|---|
 | `generar.py` | Única fuente: genera los tres scripts con identificadores deterministas |
-| `identidad.sql` | Azure SQL (identidad y reservas) |
-| `pagos.sql` | Oracle (pagos): las facturas toman su número de la secuencia real |
-| `mesa-ayuda.js` | MongoDB (mesa de ayuda), para mongosh |
+| `identidad.sql` | Base de identidad y reservas |
+| `pagos.sql` | Base de pagos: las facturas toman su número de la secuencia real |
+| `mesa-ayuda.js` | Base de la mesa de ayuda |
 | `cargar_sqlserver.py`, `CargarOracle.java` | Cargan y verifican conteos y coherencia |
-| `imagenes.py` | Genera las portadas de los eventos, los logos de las empresas y los planos de los pabellones, y los sube a Cloudinary (`exponexo/demo/`) |
+| `imagenes.py` | Genera las portadas de los eventos, los logos de las empresas y los planos de los pabellones |
 
 Reglas: todo es idempotente (correrlo de nuevo no duplica nada), los correos usan el dominio
 `ejemplo.test` (no recibe correo), las personas ficticias no pueden iniciar sesión y no se tocan las
-cuentas fijas ni las bandejas de eventos. Los tickets se asignan a las cuentas fijas de personal y
-administración.
+cuentas fijas ni las bandejas de eventos. 
 
 ## Cómo cargar
 
-Desde GitHub: **Actions → Poblar datos de demostración → Run workflow**. Primero ejecuta los tres
-scripts dos veces contra bases temporales dentro del runner (sin gastar la cuota gratuita de las
-bases reales) y solo si todo pasa los carga una vez en producción.
+Desde GitHub: **Actions → Poblar datos de demostración → Run workflow**. Primero valida los tres
+scripts en bases temporales y solo si todo pasa los carga en el entorno de la demo.
 
 Para cambiar los datos, edita `generar.py`, corre `python datos-demo/generar.py` y sube los tres
 archivos generados.

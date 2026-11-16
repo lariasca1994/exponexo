@@ -45,10 +45,31 @@ async function captura(navegador, nombre, ruta, { esperar, preparar, completa = 
   console.log(`captura ${nombre}`);
 }
 
+// Revisa que ninguna página pública se desborde a lo ancho en celular y tablet, y captura la portada en ambos.
+async function pantallas(navegador) {
+  for (const [ancho, alto, nombre] of [[800, 1280, "07-navegacion-tablet"], [390, 844, "08-navegacion-movil"]]) {
+    const contexto = await navegador.newContext({ viewport: { width: ancho, height: alto }, isMobile: ancho < 500, hasTouch: true, locale: "es-CO" });
+    const p = await contexto.newPage();
+    for (const ruta of ["/", "/eventos", "/registro", "/ingreso", "/recuperar"]) {
+      await p.goto(BASE + ruta, { waitUntil: "load", timeout: 150000 });
+      await p.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+      await p.waitForTimeout(1200);
+      const sobra = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      if (sobra > 0) throw new Error(`${ancho}px ${ruta}: la página se desborda ${sobra} px`);
+    }
+    await p.goto(`${BASE}/eventos`, { waitUntil: "load", timeout: 150000 });
+    await p.getByText("Ver plano de stands").first().waitFor({ timeout: 150000 });
+    await p.waitForTimeout(1500);
+    await p.screenshot({ path: path.join(CARPETA, `${nombre}.png`) });
+    await contexto.close();
+    console.log(`captura ${nombre}`);
+  }
+}
+
 (async () => {
-  const navegador = await chromium.launch();
+  const navegador = await chromium.launch({ args: ["--lang=es-CO"], env: { ...process.env, LANG: "es_CO.UTF-8", LANGUAGE: "es_CO:es" } });
   try {
-    await captura(navegador, "01-portada", "/", { esperar: "Eventos destacados", completa: true });
+    await captura(navegador, "01-portada", "/", { esperar: "Eventos destacados" });
     await captura(navegador, "02-registro", "/registro", {
       esperar: "Crear cuenta",
       preparar: async (p) => {
@@ -67,21 +88,22 @@ async function captura(navegador, nombre, ruta, { esperar, preparar, completa = 
         await marcar(p, ["#correo", "#contrasena", ".login-olvido", "button[type=submit]"]);
       },
     });
-    await captura(navegador, "07-recuperar", "/recuperar", {
+    await captura(navegador, "05-recuperar", "/recuperar", {
       esperar: "¿Olvidaste tu contraseña?",
       preparar: async (p) => {
         await p.fill("#correo", "ana.perez@ejemplo.com");
         await marcar(p, ["#correo", "button[type=submit]"]);
       },
     });
-    await captura(navegador, "04-eventos", "/eventos", { esperar: "Ver plano de stands", completa: true });
-    // El plano del primer evento publicado, con un stand seleccionado
+    await captura(navegador, "06-pantalla-principal", "/eventos", { esperar: "Ver plano de stands", completa: true });
+    await pantallas(navegador);
+    // El plano del primer evento publicado, con un stand seleccionado.
     const pagina = await navegador.newPage({ viewport: VISTA });
     await pagina.goto(`${BASE}/eventos`, { waitUntil: "load", timeout: 150000 });
     await pagina.getByText("Ver plano de stands").first().waitFor({ timeout: 150000 });
     const plano = await pagina.getByText("Ver plano de stands").first().getAttribute("href");
     await pagina.close();
-    await captura(navegador, "05-plano-stands", plano, {
+    await captura(navegador, "09-consultar-plano", plano, {
       esperar: "Cuadrícula de stands",
       completa: true,
       preparar: async (p) => {
@@ -90,8 +112,10 @@ async function captura(navegador, nombre, ruta, { esperar, preparar, completa = 
         await p.waitForTimeout(500);
       },
     });
-    await captura(navegador, "06-portada-oscuro", "/", { esperar: "Eventos destacados", tema: "dark" });
+    await captura(navegador, "16-no-encontrada", "/esta-pagina-no-existe", {});
+    await captura(navegador, "17-sin-conexion", "/offline.html", {});
+    await captura(navegador, "18-tema-oscuro", "/", { esperar: "Eventos destacados", tema: "dark" });
   } finally {
     await navegador.close();
   }
-})();
+})().catch((e) => { console.error("ERROR:", e.message); process.exit(1); });

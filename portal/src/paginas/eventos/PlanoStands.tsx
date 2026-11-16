@@ -67,7 +67,7 @@ export function PlanoStands() {
   return (
     <div className="container">
       <h1 style={{ marginTop: 0 }}>
-        Plano de Stands {evento ? `· ${evento.nombre}` : ""}
+        Plano de stands {evento ? `· ${evento.nombre}` : ""}
       </h1>
 
       {evento?.imagen_url && (
@@ -126,7 +126,7 @@ export function PlanoStands() {
                 >
                   <div>{st.codigo}</div>
                   <div style={{ fontSize: "0.75rem", fontWeight: 500 }}>
-                    {st.metros_cuadrados} m²
+                    {Number(st.metros_cuadrados).toLocaleString("es-CO")} m²
                   </div>
                 </button>
               ))}
@@ -148,13 +148,13 @@ export function PlanoStands() {
               </p>
               <p>
                 <strong>Tipo:</strong> {seleccionado.tipo} · <strong>Área:</strong>{" "}
-                {seleccionado.metros_cuadrados} m²
+                {Number(seleccionado.metros_cuadrados).toLocaleString("es-CO")} m²
               </p>
               <p>
                 <strong>Posición:</strong> Fila {seleccionado.fila}, Columna {seleccionado.columna}
               </p>
               <p>
-                <strong>Precio base:</strong> ${Number(seleccionado.precio_base).toLocaleString()} COP
+                <strong>Precio base:</strong> ${Number(seleccionado.precio_base).toLocaleString("es-CO")} COP
               </p>
               <p>
                 <strong>Estado actual:</strong>{" "}

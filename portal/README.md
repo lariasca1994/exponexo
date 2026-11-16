@@ -13,8 +13,7 @@ detiene con `prefers-reduced-motion`.
 
 La sesión del portal mantiene tokens en memoria. Algunas rutas y campos de las APIs todavía están
 en español; el portal conserva esos contratos legados hasta que proveedor y consumidores puedan
-migrar coordinadamente. ADR-012 y ADR-014 describen el destino técnico en inglés y JSON
-`snake_case`; consulta [CONTRATOS-API.md](../docs/CONTRATOS-API.md).
+migrar coordinadamente.
 
 Las variables `VITE_` se incluyen en el JavaScript público y solo deben contener direcciones o
 configuración no sensible.
