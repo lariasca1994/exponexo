@@ -70,7 +70,7 @@ jobs:
             curl -fsSL -o "$RUNNER_TEMP/jdbc/$n.jar" \
               "https://repo1.maven.org/maven2/com/oracle/database/$a/$VERSION_ORACLE_JDBC/$n-$VERSION_ORACLE_JDBC.jar"
           done
-          npm install -g --silent mongosh
+          npm install -g --silent mongosh@2.3.8
 
       - name: Imágenes de demostración (solo se generan, no se suben)
         run: |
@@ -151,7 +151,7 @@ jobs:
             curl -fsSL -o "$RUNNER_TEMP/jdbc/$n.jar" \
               "https://repo1.maven.org/maven2/com/oracle/database/$a/$VERSION_ORACLE_JDBC/$n-$VERSION_ORACLE_JDBC.jar"
           done
-          npm install -g --silent mongosh
+          npm install -g --silent mongosh@2.3.8
 
       - name: Imágenes de demostración a Cloudinary
         env:
