@@ -47,15 +47,15 @@ jobs:
           viejo() { [ "$(date -u -d "$1" +%s)" -lt "$limite" ]; }
           gh api --paginate "repos/${{ github.repository }}/actions/caches?per_page=100" \
             --jq '.actions_caches[] | "\(.id) \(.last_accessed_at)"' | while read -r id fecha; do
-            viejo "$fecha" && gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" > /dev/null && echo "caché $id borrada"
+            if viejo "$fecha"; then gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" > /dev/null && echo "caché $id borrada"; fi
           done
           gh api --paginate "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
             --jq '.artifacts[] | "\(.id) \(.created_at)"' | while read -r id fecha; do
-            viejo "$fecha" && gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" > /dev/null && echo "artefacto $id borrado"
+            if viejo "$fecha"; then gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" > /dev/null && echo "artefacto $id borrado"; fi
           done
           gh api --paginate "repos/${{ github.repository }}/actions/runs?per_page=100" \
             --jq '.workflow_runs[] | select(.status == "completed") | "\(.id) \(.created_at)"' | while read -r id fecha; do
-            viejo "$fecha" && gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$id" > /dev/null && echo "ejecución $id borrada"
+            if viejo "$fecha"; then gh api -X DELETE "repos/${{ github.repository }}/actions/runs/$id" > /dev/null && echo "ejecución $id borrada"; fi
           done
           true
 
@@ -92,7 +92,7 @@ jobs:
             curl -fsSL -o "$RUNNER_TEMP/jdbc/$n.jar" \
               "https://repo1.maven.org/maven2/com/oracle/database/$a/$VERSION_ORACLE_JDBC/$n-$VERSION_ORACLE_JDBC.jar"
           done
-          npm install -g --silent mongosh
+          npm install -g --silent mongosh@2.3.8
 
       - name: Identidad (Azure SQL)
         working-directory: servicios/identidad-reservas
